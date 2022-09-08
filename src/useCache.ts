@@ -16,55 +16,6 @@ export function fetchWithShowModel<T>(loadFunc: () => Promise<any>, shortKey?: s
         )
 }
 
-/**
- * 
- * @param url load data from url
- * @param shortKey load and cache data if provide
- * @param withouAuth request withou auth headers
- * @param showLoading //wheter show loading when load data from remote if configed in ConfigRequest
- * @param storageType // storage type, default: UseCacheConfig.defaultStorageType
- * @returns { loading, entity, errMsg }
- */
-export function useCache<T>(url: string, shortKey?: string, 
-    withouAuth: boolean = false, 
-    showLoading: boolean = false,
-    storageType: number = UseCacheConfig.defaultStorageType) {
-    const [loading, setLoading] = useState(false)
-    const [entity, setEntity] = useState<T>()
-    const [errMsg, setErrMsg] = useState<string>()
-    useEffect(() => {
-        setLoading(true)
-
-        const get = withouAuth? UseCacheConfig.request?.getWithouAuth : UseCacheConfig.request?.get
-        if(!get){
-            console.warn("not config request promise, please set ConfigRequest firstly")
-        }else{
-            //if show loading, but not config them, print warn
-            if(showLoading && (!UseCacheConfig.request?.showLoading || !UseCacheConfig.request?.hideLoading)){
-                console.warn("not config request showLoading/hideLoading, please set ConfigRequest firstly")
-            }
-            genericFetch(
-                () => get(url),
-                (data: T) => {
-                    setLoading(false)
-                    setEntity(data)
-                },
-                shortKey, storageType,
-                () => {
-                    setLoading(false)
-                    setErrMsg("数据移民火星了^_^")
-                },
-                (msg) => {
-                    setLoading(false)
-                    setErrMsg(msg)
-                },
-                UseCacheConfig.request?.showLoading, UseCacheConfig.request?.hideLoading
-            )
-        }
-    }, [url])
-
-    return { loading, entity, errMsg }
-}
 
 
 /**
@@ -126,4 +77,55 @@ export function genericFetch<T>(
     }
 
     return false
+}
+
+
+/**
+ * 
+ * @param url load data from url
+ * @param shortKey load and cache data if provide
+ * @param withouAuth request withou auth headers
+ * @param showLoading //wheter show loading when load data from remote if configed in ConfigRequest
+ * @param storageType // storage type, default: UseCacheConfig.defaultStorageType
+ * @returns { loading, entity, errMsg }
+ */
+export function useCache<T>(url: string, shortKey?: string, 
+    withouAuth: boolean = false, 
+    showLoading: boolean = false,
+    storageType: number = UseCacheConfig.defaultStorageType) {
+    const [loading, setLoading] = useState(false)
+    const [entity, setEntity] = useState<T>()
+    const [errMsg, setErrMsg] = useState<string>()
+    useEffect(() => {
+        setLoading(true)
+
+        const get = withouAuth? UseCacheConfig.request?.getWithouAuth : UseCacheConfig.request?.get
+        if(!get){
+            console.warn("not config request promise, please set ConfigRequest firstly")
+        }else{
+            //if show loading, but not config them, print warn
+            if(showLoading && (!UseCacheConfig.request?.showLoading || !UseCacheConfig.request?.hideLoading)){
+                console.warn("not config request showLoading/hideLoading, please set ConfigRequest firstly")
+            }
+            genericFetch(
+                () => get(url),
+                (data: T) => {
+                    setLoading(false)
+                    setEntity(data)
+                },
+                shortKey, storageType,
+                () => {
+                    setLoading(false)
+                    setErrMsg("数据移民火星了^_^")
+                },
+                (msg) => {
+                    setLoading(false)
+                    setErrMsg(msg)
+                },
+                UseCacheConfig.request?.showLoading, UseCacheConfig.request?.hideLoading
+            )
+        }
+    }, [url])
+
+    return { loading, entity, errMsg }
 }

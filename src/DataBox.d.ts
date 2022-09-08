@@ -57,13 +57,14 @@ export interface DataBoxTableList<T> extends DataBoxBase {
  */
 export function getDataFromBox<T>(box: DataBox<T>): T | undefined {
     if (box) {
-        if (box.code !== CODE.OK) {
+        if (box.code === CODE.OK) {
+            return box.data
+        }else{
             console.warn("getDataFromBox:" + JSON.stringify(box))
-            //message.warning(box.msg)
             return undefined
         }
-        return box.data
+    }else{
+        console.warn("出错了，请求结果没有数据")
+        return undefined
     }
-    console.error("出错了，请求结果没有数据")
-    return undefined
 }
