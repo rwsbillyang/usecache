@@ -9,19 +9,20 @@ import { PaginationQueryBase } from "./PaginationQueryBase";
 import { encodeUmi } from "./UmiListPagination";
 import { UmiListPagination } from "./UmiListPagination"
 
-import { fetchWithShowModel, genericFetch, useCache } from "./useCache";
+import { fetchWithLoading, genericFetch, useCache } from "./useCache";
 import { useCacheList } from "./useCacheList";
 
 
 export type { DataBox, DataBoxBase, DataBoxTableList, PaginationQueryBase, UmiListPagination, IRequest};
 
+//aim: app can import any one from "usecache"
 export {
     Cache,
     CacheStorage,
     encodeUmi, CODE, getDataFromBox,
     StorageType,
     UseCacheConfig,
-    fetchWithShowModel, useCache, genericFetch,
+    fetchWithLoading, useCache, genericFetch,
     useCacheList 
 };
 

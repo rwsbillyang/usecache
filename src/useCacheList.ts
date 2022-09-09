@@ -33,7 +33,7 @@ import { encodeUmi } from "./UmiListPagination";
     const [isLoading, setIsLoading] = useState(true); //加载状态
     const [isError, setIsError] = useState(false); //加载是否有错误
     const [errMsg, setErrMsg] = useState<string>() //加载错误信息
-    const [loadMoreState, setLoadMoreState] = useState(shortKey?getLoadMoreState(shortKey):undefined) //加载更多 按钮状态：可用和不可用，自动被管理，无需调用者管理
+    const [loadMoreState, setLoadMoreState] = useState(shortKey?getLoadMoreState(shortKey):true) //加载更多 按钮状态：可用和不可用，自动被管理，无需调用者管理
 
     const [useCache, setUseCache] = useState(!!shortKey)//从远程加载后即恢复为初始值true，以后即从本地加载，需要远程加载时再设置：setUseCache(false)
     const [isLoadMore, setIsLoadMore] = useState(false)

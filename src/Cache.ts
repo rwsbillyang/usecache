@@ -16,12 +16,13 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return undefined
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][key] === identity) {
+                    if (arry[i][myKey] === identity) {
                         return arry[i]
                     }
                 }
@@ -34,6 +35,7 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return undefined
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -41,7 +43,7 @@ export const Cache = {
                 for (let i = 0; i < arry.length; i++) {
                     const e = arry[i]
                     for (let j = 0; j < identities.length; j++) {
-                        if (e[key] === identities[j]) {
+                        if (e[myKey] === identities[j]) {
                             arry.push(e)
                         }
                     }
@@ -49,6 +51,7 @@ export const Cache = {
                 return arry
             }
         }
+        return undefined
     },
 
 
@@ -90,20 +93,21 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 //搜索现有列表，找到后更新
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][key] === e[key]) {
-                        if (UseCacheConfig.EnableDebug) console.log(`onEditOne, e[${key}]=${e[key]}, shortKey=${shortKey}`)
+                    if (arry[i][myKey] === e[myKey]) {
+                        if (UseCacheConfig.EnableDebug) console.log(`onEditOne, e[${myKey}]=${e[myKey]}, shortKey=${shortKey}`)
                         arry[i] = e
                         CacheStorage.saveObject(shortKey, arry)
                         return;
                     }
                 }
-                if (UseCacheConfig.EnableDebug) console.log(`onEditOne：not found in list, key=${key}, shortKey=${shortKey}`)
+                if (UseCacheConfig.EnableDebug) console.log(`onEditOne：not found in list, key=${myKey}, shortKey=${shortKey}`)
                 return
             }
         } else
@@ -125,6 +129,7 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -133,7 +138,7 @@ export const Cache = {
                     const e = list[j]
                     //搜索现有列表，找到后更新
                     for (let i = 0; i < arry.length; i++) {
-                        if (arry[i][key] === e[key]) {
+                        if (arry[i][myKey] === e[myKey]) {
                             arry[i] = e
                         }
                     }
@@ -152,23 +157,24 @@ export const Cache = {
     /**
      * call it when delete one successfully
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
-     * @param identities value of key 
+     * @param id value of key 
      * @param key find one by which key, default:"_id"
      * @param storageType 
      * @returns 
      */
-    onDelOne: (shortKey: string, identity: string, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelOneById: (shortKey: string, id: string, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return undefined
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let arry: any[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 //搜索现有列表，找到后删除
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][key] === identity) {
-                        if (UseCacheConfig.EnableDebug) console.log(`del one: ${key}=${identity}`)
+                    if (arry[i][myKey] === id) {
+                        if (UseCacheConfig.EnableDebug) console.log(`del one: ${myKey}=${id}`)
                         arry.splice(i, 1)
                         CacheStorage.saveItem(shortKey, JSON.stringify(arry))
                         return arry;
@@ -179,28 +185,52 @@ export const Cache = {
         return undefined
     },
 
+
     /**
-     * call it when batch delete manys successfully
+     * call it when delete one successfully
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
-     * @param identities values of key 
+     * @param e entity, item of list
      * @param key find one by which key, default:"_id"
      * @param storageType 
      * @returns 
      */
-    onDelMany: (shortKey: string, identities: string[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+     onDelOne: (shortKey: string, e: any, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return undefined
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
+        const id = e[myKey]?.toString()
+        if(id)
+            Cache.onDelOneById(shortKey, id, key, storageType)
+        else{
+            console.log("onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
+        }
+        return undefined
+    },
+
+    /**
+     * call it when batch delete manys successfully
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param ids values of key 
+     * @param key find one by which key, default:"_id"
+     * @param storageType 
+     * @returns 
+     */
+    onDelManyByIds: (shortKey: string, ids: string[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+        if (storageType === StorageType.NONE)
+            return undefined
+
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let arry: any[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 //搜索现有列表，找到后删除
                 for (let i = 0; i < arry.length; i++) {
-                    for (let j = 0; j < identities.length; j++) {
-                        const value = identities[j]
-                        if (arry[i][key] === value) {
-                            if (UseCacheConfig.EnableDebug) console.log(`del one: ${key}=${value}`)
+                    for (let j = 0; j < ids.length; j++) {
+                        const value = ids[j]
+                        if (arry[i][myKey] === value) {
+                            if (UseCacheConfig.EnableDebug) console.log(`del one: ${myKey}=${value}`)
                             arry.splice(i, 1)
                         }
                     }
@@ -211,7 +241,27 @@ export const Cache = {
         }
         return undefined
     },
+    /**
+     * call it when batch delete manys successfully
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param list entity list
+     * @param key find one by which key, default:"_id"
+     * @param storageType 
+     * @returns 
+     */
+     onDelMany: (shortKey: string, list: any[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+        if (storageType === StorageType.NONE)
+            return undefined
 
+        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
+        const ids = list.map(e => e[myKey]?.toString()).filter(e=> !!e)
+        if(ids && ids.length > 0){
+            Cache.onDelManyByIds(shortKey, ids, key, storageType)
+        }else{
+            console.log("onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
+        }
+        return undefined
+    },
     /**
      * evict the key cache with storageType
      * @param shortKey 

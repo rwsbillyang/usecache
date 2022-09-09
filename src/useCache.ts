@@ -3,16 +3,33 @@ import { UseCacheConfig } from "./UseCacheConfig"
 import { CacheStorage } from "./CacheStorage";
 import { CODE, DataBox, getDataFromBox } from "./DataBox";
 
-export function fetchWithShowModel<T>(loadFunc: () => Promise<any>, shortKey?: string){
+/**
+ * load data with loading and result toast prompt if provided from remote server or local cache depends on shortKey
+ * 
+ * @param loadFunc promise
+ * @param onOK correct and has data
+ * @param shortKey if no shortKey, not use cache
+*  @param storageType default is UseCacheConfig.defaultStorageType
+ * @param onNoData do something if no data
+ * @param onFail do something if fail
+ * @param onLoading show loading if provides
+ * @param hideLoading hide loading if provides
+ */
+export function fetchWithLoading<T>(loadFunc: () => Promise<any>, onOK: (data: T) => void, shortKey?: string,
+    storageType: number = UseCacheConfig.defaultStorageType,
+    onNoData?: () => void,
+    onFail?: (msg: string) => void,
+    showLoading?: () => void,
+    hideLoading?: () => void){
     genericFetch(
         loadFunc, 
-        (()=> {}) || UseCacheConfig.request?.showToast,
+        onOK,
         shortKey,
-        UseCacheConfig.defaultStorageType,
-        UseCacheConfig.request?.showToast,
-        UseCacheConfig.request?.showToast,
-        UseCacheConfig.request?.showLoading,
-        UseCacheConfig.request?.hideLoading
+        storageType,
+        onNoData || UseCacheConfig.request?.showToast,
+        onFail || UseCacheConfig.request?.showToast,
+        showLoading || UseCacheConfig.request?.showLoading,
+        hideLoading || UseCacheConfig.request?.hideLoading
         )
 }
 
