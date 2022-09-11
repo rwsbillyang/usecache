@@ -1,6 +1,6 @@
 import { Cache } from "./Cache";
 import { StorageType } from "./StorageType"
-import { UseCacheConfig } from "./UseCacheConfig"
+import { currentHost, UseCacheConfig } from "./UseCacheConfig"
 import { CacheStorage } from "./CacheStorage";
 import { IRequest } from "./IRequest";
 
@@ -23,6 +23,7 @@ export {
     StorageType,
     UseCacheConfig,
     fetchWithLoading, useCache, genericFetch,
-    useCacheList 
+    useCacheList,
+    currentHost, 
 };
 
