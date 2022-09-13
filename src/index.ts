@@ -15,7 +15,7 @@ import { useCacheList } from "./useCacheList";
 
 export type { DataBox, DataBoxBase, DataBoxTableList, PaginationQueryBase, UmiListPagination, IRequest};
 
-//aim: app can import any one from "usecache"
+//aim: app can import any one from "@rwsbillyang/usecache"
 export {
     Cache,
     CacheStorage,

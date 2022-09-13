@@ -1,19 +1,48 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import svgrPlugin from 'vite-plugin-svgr';
+/// <reference types="vitest" />
+/// <reference types="vite/client" />
 
-// https://vitejs.dev/config/
+import dts from 'vite-plugin-dts';
+import path from 'path';
+import { defineConfig } from 'vite';
+
+// vite config can not read babel.config.js🤣🤣🤣
 export default defineConfig({
-  plugins: [react(), svgrPlugin()],
   build: {
-    outDir: 'lib',
+    minify: true,
     lib: {
-      entry: './src/index.ts',
-      formats: ['es'],
-      fileName: (format) => `index.${format}.js`
+      fileName: (type) => {
+        if (type === 'es') return 'esm/index.js';
+        if (type === 'cjs') return 'index.js';
+        return 'index.js';
+      },
+      entry: path.resolve(__dirname, 'src/index.ts'),
+      formats: ['es', 'cjs'],
     },
+    sourcemap: false,
     rollupOptions: {
-      external: ['react', 'react-dom']
-    }
-  }
+      external: [
+        'react',
+        'react-dom'
+      ],
+    },
+  },
+  plugins: [
+    // https://www.npmjs.com/package/vite-plugin-dts
+    dts({
+      include: 'src',
+      rollupTypes: true,
+      afterBuild: () => {
+        // do something else
+      },
+    }),
+  ],
+  // https://github.com/vitest-dev/vitest
+  // test: {
+  //   globals: true,
+  //   environment: 'jsdom',
+  //   setupFiles: ['./setupTests.ts'],
+  //   transformMode: {
+  //     web: [/.[tj]sx$/],
+  //   },
+  // },
 });

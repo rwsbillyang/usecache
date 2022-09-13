@@ -2,7 +2,7 @@ import { IRequest } from "./IRequest";
 import { StorageType } from "./StorageType";
 
 interface IUseCacheConfig{
-    EnableDebug: true
+    EnableLog: boolean
     cacheKeyPrefix: string
     defaultIdentiyKey: string
     defaultStorageType: number
@@ -11,7 +11,7 @@ interface IUseCacheConfig{
 }
 
 export const UseCacheConfig: IUseCacheConfig = {
-    EnableDebug: true,
+    EnableLog: false,
 
     cacheKeyPrefix: "",
     

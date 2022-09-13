@@ -44,7 +44,7 @@ import { encodeUmi } from "./UmiListPagination";
     //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
     const fetchDataFromRemote = (query?: Q, onDone?: (data?: T[]) => void) => {
-        if (UseCacheConfig.EnableDebug) console.log("fetch from remote... shortKey=" + shortKey + ", query=" + JSON.stringify(query))
+        if (UseCacheConfig.EnableLog) console.log("fetch from remote... shortKey=" + shortKey + ", query=" + JSON.stringify(query))
         
         const get = UseCacheConfig.request?.get
         if(!get){
@@ -116,21 +116,21 @@ import { encodeUmi } from "./UmiListPagination";
     }
 
     useEffect(() => {
-        if (UseCacheConfig.EnableDebug) console.log("in useEffect loading, url=" + url + ", query=" + JSON.stringify(query))
+        if (UseCacheConfig.EnableLog) console.log("in useEffect loading, url=" + url + ", query=" + JSON.stringify(query))
         setIsLoading(true)
         if (useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
             if (v) {
-                if (UseCacheConfig.EnableDebug) console.log("fetch from local cache... shortKey=" + shortKey)
+                if (UseCacheConfig.EnableLog) console.log("fetch from local cache... shortKey=" + shortKey)
                 setList(v)
                 setIsLoading(false)
                 setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
             } else {
-                if (UseCacheConfig.EnableDebug) console.log("no local cache, try from remote...")
+                if (UseCacheConfig.EnableLog) console.log("no local cache, try from remote...")
                 fetchDataFromRemote(query)//无缓存时从远程加载
             }
         } else {
-            if (UseCacheConfig.EnableDebug) console.log("useCache=false, try from remote...")
+            if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
             fetchDataFromRemote(query)
         }
 

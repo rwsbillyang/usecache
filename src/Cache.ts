@@ -101,17 +101,17 @@ export const Cache = {
                 //搜索现有列表，找到后更新
                 for (let i = 0; i < arry.length; i++) {
                     if (arry[i][myKey] === e[myKey]) {
-                        if (UseCacheConfig.EnableDebug) console.log(`onEditOne, e[${myKey}]=${e[myKey]}, shortKey=${shortKey}`)
+                        if (UseCacheConfig.EnableLog) console.log(`onEditOne, e[${myKey}]=${e[myKey]}, shortKey=${shortKey}`)
                         arry[i] = e
                         CacheStorage.saveObject(shortKey, arry)
                         return;
                     }
                 }
-                if (UseCacheConfig.EnableDebug) console.log(`onEditOne：not found in list, key=${myKey}, shortKey=${shortKey}`)
+                if (UseCacheConfig.EnableLog) console.log(`onEditOne：not found in list, key=${myKey}, shortKey=${shortKey}`)
                 return
             }
         } else
-            if (UseCacheConfig.EnableDebug) console.log("onEditOne：not found list: shortKey=" + shortKey)
+            if (UseCacheConfig.EnableLog) console.log("onEditOne：not found list: shortKey=" + shortKey)
     },
 
 
@@ -150,7 +150,7 @@ export const Cache = {
                 return
             }
         } else
-            if (UseCacheConfig.EnableDebug) console.log("onEditMany: not found list, shortKey=" + shortKey)
+            if (UseCacheConfig.EnableLog) console.log("onEditMany: not found list, shortKey=" + shortKey)
     },
 
 
@@ -174,7 +174,7 @@ export const Cache = {
                 //搜索现有列表，找到后删除
                 for (let i = 0; i < arry.length; i++) {
                     if (arry[i][myKey] === id) {
-                        if (UseCacheConfig.EnableDebug) console.log(`del one: ${myKey}=${id}`)
+                        if (UseCacheConfig.EnableLog) console.log(`del one: ${myKey}=${id}`)
                         arry.splice(i, 1)
                         CacheStorage.saveItem(shortKey, JSON.stringify(arry))
                         return arry;
@@ -230,7 +230,7 @@ export const Cache = {
                     for (let j = 0; j < ids.length; j++) {
                         const value = ids[j]
                         if (arry[i][myKey] === value) {
-                            if (UseCacheConfig.EnableDebug) console.log(`del one: ${myKey}=${value}`)
+                            if (UseCacheConfig.EnableLog) console.log(`del one: ${myKey}=${value}`)
                             arry.splice(i, 1)
                         }
                     }
