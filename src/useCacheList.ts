@@ -89,6 +89,7 @@ import { encodeUmi } from "./UmiListPagination";
                         if(shortKey) saveLoadMoreState(shortKey, false)
                     }
                     setErrMsg(box.msg || box.code)
+                    if(UseCacheConfig.EnableLog) console.log("useCacheList: fail from remote server: code="+box.code+",msg="+box.msg)
                 }
 
                 //报告数据请求结束
@@ -112,6 +113,8 @@ import { encodeUmi } from "./UmiListPagination";
                 }
 
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
+
+                if(UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server:", err)
             })
     }
 

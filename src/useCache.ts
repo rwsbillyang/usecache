@@ -60,8 +60,11 @@ export function genericFetch<T>(
     if (shortKey) {
         const v = CacheStorage.getObject(shortKey, storageType)
         if (v) {
+            if(UseCacheConfig.EnableLog) console.log("genericFetch: got value from cache, shortKey="+shortKey)
             onOK(v)
             return true
+        }else{
+            if(UseCacheConfig.EnableLog) console.log("genericFetch: not found value from cache, shortKey="+shortKey)
         }
     } else {
         if (showLoading) showLoading()
@@ -73,7 +76,10 @@ export function genericFetch<T>(
                 if (box.code === CODE.OK) {
                     const data = getDataFromBox(box)
                     if (data === undefined) { //if(0)返回false if(data)判断有问题
-                        if (onNoData) onNoData()
+                        if (onNoData){
+                            if(UseCacheConfig.EnableLog) console.log("genericFetch: no data from remote server")
+                            onNoData()
+                        } 
                     } else {
                         if (shortKey) {
                             CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
@@ -82,13 +88,16 @@ export function genericFetch<T>(
                     }
                     return false
                 } else {
-                    if (onFail) onFail(box.msg || box.code)
+                    if (onFail){
+                        if(UseCacheConfig.EnableLog) console.log("genericFetch: fail from remote server: code="+box.code+",msg="+box.msg)
+                        onFail(box.msg || box.code)}
                     return false;
                 }
             })
             .catch(err => {
                 if (hideLoading) hideLoading()
                 if (onFail) onFail(err.message)
+                if(UseCacheConfig.EnableLog) console.log("genericFetch exception from remote server:", err)
                 return false;
             })
     }
