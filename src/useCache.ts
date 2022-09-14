@@ -20,9 +20,9 @@ export function fetchWithLoading<T>(loadFunc: () => Promise<any>, onOK: (data: T
     onNoData?: () => void,
     onFail?: (msg: string) => void,
     showLoading?: () => void,
-    hideLoading?: () => void){
+    hideLoading?: () => void) {
     genericFetch(
-        loadFunc, 
+        loadFunc,
         onOK,
         shortKey,
         storageType,
@@ -30,7 +30,7 @@ export function fetchWithLoading<T>(loadFunc: () => Promise<any>, onOK: (data: T
         onFail || UseCacheConfig.request?.showToast,
         showLoading || UseCacheConfig.request?.showLoading,
         hideLoading || UseCacheConfig.request?.hideLoading
-        )
+    )
 }
 
 
@@ -60,48 +60,50 @@ export function genericFetch<T>(
     if (shortKey) {
         const v = CacheStorage.getObject(shortKey, storageType)
         if (v) {
-            if(UseCacheConfig.EnableLog) console.log("genericFetch: got value from cache, shortKey="+shortKey)
+            if (UseCacheConfig.EnableLog) console.log("genericFetch: got value from cache, shortKey=" + shortKey)
             onOK(v)
             return true
-        }else{
-            if(UseCacheConfig.EnableLog) console.log("genericFetch: not found value from cache, shortKey="+shortKey)
+        } else {
+            if (UseCacheConfig.EnableLog) console.log("genericFetch: not found value from cache, shortKey=" + shortKey)
         }
-    } else {
-        if (showLoading) showLoading()
-
-        loadFunc()
-            .then(res => {
-                if (hideLoading) hideLoading()
-                const box: DataBox<T> = res.data
-                if (box.code === CODE.OK) {
-                    const data = getDataFromBox(box)
-                    if (data === undefined) { //if(0)返回false if(data)判断有问题
-                        if (onNoData){
-                            if(UseCacheConfig.EnableLog) console.log("genericFetch: no data from remote server")
-                            onNoData()
-                        } 
-                    } else {
-                        if (shortKey) {
-                            CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
-                        }
-                        onOK(data)
-                    }
-                    return false
-                } else {
-                    if (onFail){
-                        if(UseCacheConfig.EnableLog) console.log("genericFetch: fail from remote server: code="+box.code+",msg="+box.msg)
-                        onFail(box.msg || box.code)}
-                    return false;
-                }
-            })
-            .catch(err => {
-                if (hideLoading) hideLoading()
-                if (onFail) onFail(err.message)
-                if(UseCacheConfig.EnableLog) console.log("genericFetch exception from remote server:", err)
-                return false;
-            })
     }
+    
+    if (showLoading) showLoading()
 
+    if (UseCacheConfig.EnableLog) console.log("genericFetch: from remote server...")
+    
+    loadFunc()
+        .then(res => {
+            if (hideLoading) hideLoading()
+            const box: DataBox<T> = res.data
+            if (box.code === CODE.OK) {
+                const data = getDataFromBox(box)
+                if (data === undefined) { //if(0)返回false if(data)判断有问题
+                    if (onNoData) {
+                        if (UseCacheConfig.EnableLog) console.log("genericFetch: no data from remote server")
+                        onNoData()
+                    }
+                } else {
+                    if (shortKey) {
+                        CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
+                    }
+                    onOK(data)
+                }
+                return false
+            } else {
+                if (onFail) {
+                    if (UseCacheConfig.EnableLog) console.log("genericFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
+                    onFail(box.msg || box.code)
+                }
+                return false;
+            }
+        })
+        .catch(err => {
+            if (hideLoading) hideLoading()
+            if (onFail) onFail(err.message)
+            if (UseCacheConfig.EnableLog) console.log("genericFetch exception from remote server:", err)
+            return false;
+        })
     return false
 }
 
@@ -115,8 +117,8 @@ export function genericFetch<T>(
  * @param storageType // storage type, default: UseCacheConfig.defaultStorageType
  * @returns { loading, entity, errMsg }
  */
-export function useCache<T>(url: string, shortKey?: string, 
-    withouAuth: boolean = false, 
+export function useCache<T>(url: string, shortKey?: string,
+    withouAuth: boolean = false,
     showLoading: boolean = false,
     storageType: number = UseCacheConfig.defaultStorageType) {
     const [loading, setLoading] = useState(false)
@@ -125,12 +127,12 @@ export function useCache<T>(url: string, shortKey?: string,
     useEffect(() => {
         setLoading(true)
 
-        const get = withouAuth? UseCacheConfig.request?.getWithouAuth : UseCacheConfig.request?.get
-        if(!get){
+        const get = withouAuth ? UseCacheConfig.request?.getWithouAuth : UseCacheConfig.request?.get
+        if (!get) {
             console.warn("not config request promise, please set ConfigRequest firstly")
-        }else{
+        } else {
             //if show loading, but not config them, print warn
-            if(showLoading && (!UseCacheConfig.request?.showLoading || !UseCacheConfig.request?.hideLoading)){
+            if (showLoading && (!UseCacheConfig.request?.showLoading || !UseCacheConfig.request?.hideLoading)) {
                 console.warn("not config request showLoading/hideLoading, please set ConfigRequest firstly")
             }
             genericFetch(
