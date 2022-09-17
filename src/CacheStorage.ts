@@ -2,10 +2,9 @@ import { StorageType } from "./StorageType"
 import {UseCacheConfig } from "./UseCacheConfig"
 
 export const CacheStorage = {
-
     /**
      * 
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param storageType localStorage or sessionStorage, or both, or none
      * @param defaultValue  default value
      * @returns string or undefined
@@ -15,7 +14,7 @@ export const CacheStorage = {
             return defaultValue
     
         let v: string | null | undefined = undefined
-        const key = UseCacheConfig.cacheKeyPrefix + shortKey
+        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             v = sessionStorage.getItem(key)
         } else if (storageType === StorageType.OnlyLocalStorage) {
@@ -34,7 +33,7 @@ export const CacheStorage = {
 
     /**
      * 
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param storageType localStorage or sessionStorage, or both, or none
      * @param defaultValue  default value
      * @returns object after JSON.parse
@@ -49,7 +48,7 @@ export const CacheStorage = {
 
     /**
      * 
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param v string value 
      * @param storageType ocalStorage or sessionStorage, or both
      * @returns 
@@ -57,7 +56,7 @@ export const CacheStorage = {
     saveItem:  (shortKey: string, v: string, storageType: number = StorageType.OnlySessionStorage) => {
         if (storageType === StorageType.NONE)
             return
-        const key = UseCacheConfig.cacheKeyPrefix + shortKey
+        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             sessionStorage.setItem(key, v)
         } else if (storageType === StorageType.OnlyLocalStorage) {
@@ -73,7 +72,7 @@ export const CacheStorage = {
 
     /**
      * 
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param v object after JSON.stringify and save it
      * @param storageType ocalStorage or sessionStorage, or both
      */

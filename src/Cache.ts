@@ -83,7 +83,7 @@ export const Cache = {
 
     /**
      * call it when update one successully
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param e entity
      * @param id find one by which key, default:"_id"
      * @param storageType 
@@ -119,7 +119,7 @@ export const Cache = {
 
     /**
      * call it after batch update
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param list entity
      * @param key find one by which key, default:"_id"
      * @param storageType 
@@ -156,7 +156,7 @@ export const Cache = {
 
     /**
      * call it when delete one successfully
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param id value of key 
      * @param key find one by which key, default:"_id"
      * @param storageType 
@@ -188,7 +188,7 @@ export const Cache = {
 
     /**
      * call it when delete one successfully
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param e entity, item of list
      * @param key find one by which key, default:"_id"
      * @param storageType 
@@ -210,7 +210,7 @@ export const Cache = {
 
     /**
      * call it when batch delete manys successfully
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param ids values of key 
      * @param key find one by which key, default:"_id"
      * @param storageType 
@@ -243,7 +243,7 @@ export const Cache = {
     },
     /**
      * call it when batch delete manys successfully
-     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix + shortKey
+     * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param list entity list
      * @param key find one by which key, default:"_id"
      * @param storageType 
@@ -268,7 +268,7 @@ export const Cache = {
      * @param storageType 
      */
     evictCache: (shortKey: string, storageType: number = UseCacheConfig.defaultStorageType) => {
-        const key = UseCacheConfig.cacheKeyPrefix + shortKey
+        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             sessionStorage.removeItem(key)
         } else if (storageType === StorageType.OnlyLocalStorage) {

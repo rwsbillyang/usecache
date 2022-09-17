@@ -3,7 +3,7 @@ import { StorageType } from "./StorageType";
 
 interface IUseCacheConfig{
     EnableLog: boolean
-    cacheKeyPrefix: string
+    cacheKeyPrefix: () => string
     defaultIdentiyKey: string
     defaultStorageType: number
     PageSize: number
@@ -13,7 +13,7 @@ interface IUseCacheConfig{
 export const UseCacheConfig: IUseCacheConfig = {
     EnableLog: false,
 
-    cacheKeyPrefix: "",
+    cacheKeyPrefix: () => "",
     
     /**
      * identiyKey used in Cache, uesd to find one in cached list by key when onEditOne/onDelOne etc. 

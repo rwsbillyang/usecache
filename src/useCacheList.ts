@@ -148,12 +148,12 @@ import { encodeUmi } from "./UmiListPagination";
  * @param shortKey 列表的缓存key，后面会自动加'/loadMore'
  */
  function getLoadMoreState(shortKey: string) {
-    const key = UseCacheConfig.cacheKeyPrefix + shortKey + '/loadMore'
+    const key = UseCacheConfig.cacheKeyPrefix() + shortKey + '/loadMore'
     const cached = sessionStorage.getItem(key)
 
     return (cached && cached === '0') ? false : true
 }
 function saveLoadMoreState(shortKey: string, state: boolean) {
-    const key = UseCacheConfig.cacheKeyPrefix + shortKey + '/loadMore'
+    const key = UseCacheConfig.cacheKeyPrefix() + shortKey + '/loadMore'
     sessionStorage.setItem(key, state ? '1' : '0')
 }
