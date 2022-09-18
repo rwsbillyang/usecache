@@ -127,7 +127,7 @@ export function useCache<T>(url: string, shortKey?: string,
     useEffect(() => {
         setLoading(true)
 
-        const get = withouAuth ? UseCacheConfig.request?.getWithouAuth : UseCacheConfig.request?.get
+        const get = withouAuth ? UseCacheConfig.request?.getWithoutAuth : UseCacheConfig.request?.get
         if (!get) {
             console.warn("not config request promise, please set ConfigRequest firstly")
         } else {
