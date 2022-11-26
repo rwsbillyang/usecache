@@ -27,7 +27,7 @@ export const CacheStorage = {
                 if (v) sessionStorage.setItem(key, v)
             }
         }
-        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.getItem: key=${key}, v=${v}, defaultValue=${defaultValue}`)
+        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.getItem: key=${key}, defaultValue=${defaultValue}`)
         return v || defaultValue
     },
 
@@ -78,6 +78,20 @@ export const CacheStorage = {
      */
     saveObject: (shortKey: string, v: object, storageType: number = StorageType.OnlySessionStorage) => {
         return CacheStorage.saveItem(shortKey, JSON.stringify(v), storageType)
-    }
+    },
 
+    remove: (shortKey: string,  storageType: number = StorageType.OnlySessionStorage) => {
+        if (storageType === StorageType.NONE)
+            return
+        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
+        if (storageType === StorageType.OnlySessionStorage) {
+            sessionStorage.removeItem(key)
+        } else if (storageType === StorageType.OnlyLocalStorage) {
+            localStorage.removeItem(key)
+        }
+        else if (storageType === StorageType.BothStorage) {
+            sessionStorage.removeItem(key)
+            localStorage.removeItem(key)
+        }
+    }
 }

@@ -1,10 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./UseCacheConfig";
 import { CODE, DataBox, getDataFromBox } from "./DataBox";
 import { PaginationQueryBase } from "./PaginationQueryBase";
 import { encodeUmi } from "./UmiListPagination";
+
+
+
+//去除无效参数化后，排序，然后生成：?key1=xx&key2=yy&key3=zz 形式的字符串，无参数化返回空字符”“
+function query2Params<Q extends PaginationQueryBase>(query?: Q) {
+    if (!query) return ''
+
+    //将PaginationQueryBase的pagination编码为umi后，去除它 
+    // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
+    if(query.pagination) query.umi = encodeUmi(query.pagination)
+    query.pagination = undefined
+
+    if (UseCacheConfig.EnableLog) 
+        console.log("query2Params: newQuery="+JSON.stringify(query))
+
+    const tempArray: string[] = [];
+    for (const item in query) {
+        if (item) {
+            const value = query[item]
+            if (value === null || value === undefined || value === "") {
+               // console.log(`query2Params: no value for ${item}, ignore`)
+            } else {
+                tempArray.push(`${item}=${value}`)
+            }
+        }
+    }
+    if (tempArray.length > 0) {
+        return "?" + tempArray.sort().join('&')
+    } else return ''
+
+}
+
 /**
  *  hook which loads list data from cache or remote with pagination
  * 
@@ -21,43 +53,69 @@ import { encodeUmi } from "./UmiListPagination";
  * @param storageType cache storage type, default: sessionStorage
  * @return isLoading, isError, errMsg, list, loadMoreState, setQuery
  */
- export function useCacheList<T, Q extends PaginationQueryBase>(
+export function useCacheList<T, Q extends PaginationQueryBase>(
     url: string,
     shortKey?: string,
     initalQuery?: Q,
-    needLoadMore: boolean = true, //分页数据为true，全部数据为false
+    needLoadMore: boolean = true, //是否需要加载更多按钮，分页数据为true，全部数据为false
     storageType: number = UseCacheConfig.defaultStorageType
 ) {
+    //下面保存页面渲染时需用到的数据，任何更改，将导致页面重新渲染
     const [list, setList] = useState<T[]>();
-    const [query, setQuery] = useState(initalQuery) //请求查询条件变化将导致重新请求
     const [isLoading, setIsLoading] = useState(true); //加载状态
     const [isError, setIsError] = useState(false); //加载是否有错误
     const [errMsg, setErrMsg] = useState<string>() //加载错误信息
-    const [loadMoreState, setLoadMoreState] = useState(shortKey?getLoadMoreState(shortKey):true) //加载更多 按钮状态：可用和不可用，自动被管理，无需调用者管理
+    const [loadMoreState, setLoadMoreState] = useState(shortKey ? getLoadMoreState(shortKey) : true) //加载更多 按钮状态：可用和不可用，自动被管理，无需调用者管理
 
-    const [useCache, setUseCache] = useState(!!shortKey)//从远程加载后即恢复为初始值true，以后即从本地加载，需要远程加载时再设置：setUseCache(false)
-    const [isLoadMore, setIsLoadMore] = useState(false)
+    //useEffect的依赖项不能是useRef中的current或current中的filed，
+    //因为检查useEffect是在渲染的过程中进行，若有变化会在渲染结束后执行，修改useRef中的current值，无法触发渲染从而不执行useEffect
+    //只能等下次渲染时，才会检查到变化得到执行，故而useEffect只依赖wholeUrl,欲想重新加载，修改wholeUrl即可
+    //https://github.com/facebook/react/issues/14387
+    //React checks the effect dependencies during render, but defers running the effect until after commit/paint.
+    const [wholeUrl, setWholeUrl] = useState(url+query2Params(initalQuery))//修改将触发useEffect中的加载数据，往往是加载远程数据
+    //refresh用于刷新本地list数据, 如修改后返回list时，需刷新 setQuery也能达到同样效果，但往往用于从远程加载
+    const [refreshCount, setRefreshCount] = useState(0) //修改将触发useEffect中的加载数据
 
-    const [refresh, setRefresh] = useState<number>(0) //refresh用于刷新本地list数据, setQuery也能达到同样效果，但往往用于从远程加载
-    // const [currentPage, setCurrentPage] = useState(1)
 
+    //加载数据时的配置，渲染后它们得到修改，下次渲染时使用他们的最新值
+    const { current } = useRef({
+        pageSize: initalQuery?.pagination?.pageSize || UseCacheConfig.PageSize, //list page size
+        useCache: !!shortKey, //是否只从local cache 中加载，若提供键值则为true
+        isLoadMore: false, //是否加载更多的标志
+    })
+    //设置加载参数，设置为false，将只从远程加载
+    const setUseCache = (useLocalCache: boolean) => {current.useCache = useLocalCache}
+
+    //设置为true，加载后的数据将与原列表数据合并，加载完成后自动设置为false，等待下载加载更多时需重新设置为true
+    const setIsLoadMore = (toLoadMore: boolean) => {current.isLoadMore = toLoadMore}
+    
+
+    //调用它重新加载，往往需要加载本地数据
+    const setRefresh = () => { setRefreshCount(refreshCount+1)}
+    //调用它，若参数变化，将重新加载数据，往往是远程数据
+    const setQuery =  (query?: Q) => {
+        if (UseCacheConfig.EnableLog) 
+          console.log("update query for wholeUrl...query="+JSON.stringify(query))
+        setWholeUrl(url+query2Params(query))        
+    }
+  
     //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
-    const fetchDataFromRemote = (query?: Q, onDone?: (data?: T[]) => void) => {
-        if (UseCacheConfig.EnableLog) console.log("fetch from remote... shortKey=" + shortKey + ", query=" + JSON.stringify(query))
-        
+    const fetchDataFromRemote = (wholeUrl: string, isLoadMore: boolean, pageSize: number, onDone?: (data?: T[]) => void) => {
+  
+        if (UseCacheConfig.EnableLog) console.log("fetch from remote... url=" + wholeUrl)
+
         const get = UseCacheConfig.request?.get
-        if(!get){
+        if (!get) {
             console.warn("please inject get request firstly")
-            return 
+            return
         }
 
-        //将PaginationQueryBase的pagination编码为umi后，去除它
-        get(url, query?.pagination ? { ...query, umi: encodeUmi(query.pagination), sort: undefined, pagination: undefined } : { ...query, sort: undefined })
+        get(wholeUrl)
             .then(res => {
                 setIsLoading(false)
-                setUseCache(true)
-  
+               setUseCache(true)
+
                 const box: DataBox<T[]> = res.data
                 const data = getDataFromBox(box)
                 if (box.code === CODE.OK) {
@@ -67,39 +125,39 @@ import { encodeUmi } from "./UmiListPagination";
                         const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
                         setList(result)
 
-                        if(shortKey) CacheStorage.saveObject(shortKey, result, storageType)
-                      
-                        if (needLoadMore) {
-                            const newState = data.length >= (query?.pagination?.pageSize || UseCacheConfig.PageSize)
+                        if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
+
+                        if (needLoadMore) {//每次渲染时捕获传来的最新值
+                            const newState = data.length >= pageSize
                             setLoadMoreState(newState)
-                            if(shortKey) saveLoadMoreState(shortKey, newState)
+                            if (shortKey) saveLoadMoreState(shortKey, newState)
                         }
 
                     } else {
                         setIsError(true)
                         if (needLoadMore) {
                             setErrMsg("no data")
-                            if(shortKey) saveLoadMoreState(shortKey, false)
+                            if (shortKey) saveLoadMoreState(shortKey, false)
                         }
                     }
                 } else {
                     setIsError(true)
                     if (needLoadMore) {
                         setLoadMoreState(false)
-                        if(shortKey) saveLoadMoreState(shortKey, false)
+                        if (shortKey) saveLoadMoreState(shortKey, false)
                     }
                     setErrMsg(box.msg || box.code)
-                    if(UseCacheConfig.EnableLog) console.log("useCacheList: fail from remote server: code="+box.code+",msg="+box.msg)
+                    if (UseCacheConfig.EnableLog) console.log("useCacheList: fail from remote server: code=" + box.code + ",msg=" + box.msg)
                 }
 
                 //报告数据请求结束
                 if (onDone) onDone(data)
 
 
-                setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
+                  setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
             })
             .catch(err => {
-                setUseCache(true)
+                  setUseCache(true)
 
                 //报告数据请求结束
                 if (onDone) onDone()
@@ -108,20 +166,21 @@ import { encodeUmi } from "./UmiListPagination";
                 setIsError(true)
                 setErrMsg(err.message)
                 if (needLoadMore) {
-                    if(shortKey) saveLoadMoreState(shortKey, false)
+                    if (shortKey) saveLoadMoreState(shortKey, false)
                     setLoadMoreState(false)
                 }
 
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
 
-                if(UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server:", err)
+                if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server:", err)
             })
     }
 
     useEffect(() => {
-        if (UseCacheConfig.EnableLog) console.log("in useEffect loading, url=" + url + ", query=" + JSON.stringify(query))
+        if (UseCacheConfig.EnableLog) 
+            console.log("in useCacheList useEffect, try load from local or remote, refreshCount="+refreshCount+ ", wholeUrl="+wholeUrl)
         setIsLoading(true)
-        if (useCache && shortKey) {
+        if (current.useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
             if (v) {
                 if (UseCacheConfig.EnableLog) console.log("fetch from local cache... shortKey=" + shortKey)
@@ -130,16 +189,16 @@ import { encodeUmi } from "./UmiListPagination";
                 setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
             } else {
                 if (UseCacheConfig.EnableLog) console.log("no local cache, try from remote...")
-                fetchDataFromRemote(query)//无缓存时从远程加载
+                fetchDataFromRemote(wholeUrl, current.isLoadMore, current.pageSize)//无缓存时从远程加载
             }
         } else {
             if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
-            fetchDataFromRemote(query)
+            fetchDataFromRemote(wholeUrl,current.isLoadMore,  current.pageSize)
         }
 
-    }, [url, query, refresh])// url, query, refresh变化
+    }, [wholeUrl, refreshCount])//变化导致重新加载 
 
-    return { isLoading, isError, errMsg, loadMoreState, query, setQuery, list, setList, fetchDataFromRemote, refresh, setRefresh, setUseCache, setIsLoadMore }
+    return { isLoading, isError, errMsg, loadMoreState,  list,  refreshCount, setList, fetchDataFromRemote, setQuery, setRefresh, setUseCache, setIsLoadMore }
 }
 
 
@@ -147,7 +206,7 @@ import { encodeUmi } from "./UmiListPagination";
  * 获取sessionStorage中缓存的loadMore状态
  * @param shortKey 列表的缓存key，后面会自动加'/loadMore'
  */
- function getLoadMoreState(shortKey: string) {
+function getLoadMoreState(shortKey: string) {
     const key = UseCacheConfig.cacheKeyPrefix() + shortKey + '/loadMore'
     const cached = sessionStorage.getItem(key)
 
