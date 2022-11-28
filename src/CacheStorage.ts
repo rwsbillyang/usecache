@@ -67,7 +67,7 @@ export const CacheStorage = {
             localStorage.setItem(key, v)
         }
 
-        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.saveItem: key=${key}, v=${v}`)
+        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.saveItem: key=${key}`)
     }, 
 
     /**

@@ -14,18 +14,18 @@ function query2Params<Q extends PaginationQueryBase>(query?: Q) {
 
     //将PaginationQueryBase的pagination编码为umi后，去除它 
     // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
-    if(query.pagination) query.umi = encodeUmi(query.pagination)
+    if (query.pagination) query.umi = encodeUmi(query.pagination)
     query.pagination = undefined
 
-    if (UseCacheConfig.EnableLog) 
-        console.log("query2Params: newQuery="+JSON.stringify(query))
+    if (UseCacheConfig.EnableLog)
+        console.log("query2Params: newQuery=" + JSON.stringify(query))
 
     const tempArray: string[] = [];
     for (const item in query) {
         if (item) {
             const value = query[item]
             if (value === null || value === undefined || value === "") {
-               // console.log(`query2Params: no value for ${item}, ignore`)
+                if (UseCacheConfig.EnableLog) console.log(`query2Params: no value for ${item}, ignore`)
             } else {
                 tempArray.push(`${item}=${value}`)
             }
@@ -61,7 +61,7 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
     storageType: number = UseCacheConfig.defaultStorageType
 ) {
     //下面保存页面渲染时需用到的数据，任何更改，将导致页面重新渲染
-    const [list, setList] = useState<T[]>();
+    const [list, setList] = useState<T[]>([]);
     const [isLoading, setIsLoading] = useState(true); //加载状态
     const [isError, setIsError] = useState(false); //加载是否有错误
     const [errMsg, setErrMsg] = useState<string>() //加载错误信息
@@ -72,10 +72,11 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
     //只能等下次渲染时，才会检查到变化得到执行，故而useEffect只依赖wholeUrl,欲想重新加载，修改wholeUrl即可
     //https://github.com/facebook/react/issues/14387
     //React checks the effect dependencies during render, but defers running the effect until after commit/paint.
-    const [wholeUrl, setWholeUrl] = useState(url+query2Params(initalQuery))//修改将触发useEffect中的加载数据，往往是加载远程数据
+    const [wholeUrl, setWholeUrl] = useState<string | undefined>()//修改将触发useEffect中的加载数据，往往是加载远程数据, 不能设置初始值，否则再次刷新时不加载，因为query转换成str后无变化
     //refresh用于刷新本地list数据, 如修改后返回list时，需刷新 setQuery也能达到同样效果，但往往用于从远程加载
     const [refreshCount, setRefreshCount] = useState(0) //修改将触发useEffect中的加载数据
 
+    if (UseCacheConfig.EnableLog) console.log("call useCacheList2, wholeUrl=" + wholeUrl + ", list=" + list)
 
     //加载数据时的配置，渲染后它们得到修改，下次渲染时使用他们的最新值
     const { current } = useRef({
@@ -84,25 +85,28 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
         isLoadMore: false, //是否加载更多的标志
     })
     //设置加载参数，设置为false，将只从远程加载
-    const setUseCache = (useLocalCache: boolean) => {current.useCache = useLocalCache}
+    const setUseCache = (useLocalCache: boolean) => { current.useCache = useLocalCache }
 
     //设置为true，加载后的数据将与原列表数据合并，加载完成后自动设置为false，等待下载加载更多时需重新设置为true
-    const setIsLoadMore = (toLoadMore: boolean) => {current.isLoadMore = toLoadMore}
-    
+    const setIsLoadMore = (toLoadMore: boolean) => { current.isLoadMore = toLoadMore }
+
 
     //调用它重新加载，往往需要加载本地数据
-    const setRefresh = () => { setRefreshCount(refreshCount+1)}
+    const setRefresh = () => { setRefreshCount(refreshCount + 1) }
     //调用它，若参数变化，将重新加载数据，往往是远程数据
-    const setQuery =  (query?: Q) => {
-        if (UseCacheConfig.EnableLog) 
-          console.log("update query for wholeUrl...query="+JSON.stringify(query))
-        setWholeUrl(url+query2Params(query))        
+    const setQuery = (query?: Q) => {
+        if (UseCacheConfig.EnableLog)
+            console.log("update query for wholeUrl...query=" + JSON.stringify(query))
+        setWholeUrl(url + query2Params(query))
     }
-  
+
     //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
-    const fetchDataFromRemote = (wholeUrl: string, isLoadMore: boolean, pageSize: number, onDone?: (data?: T[]) => void) => {
-  
+    const fetchDataFromRemote = (isLoadMore: boolean, pageSize: number, wholeUrl?: string, onDone?: (data?: T[]) => void) => {
+        if (!wholeUrl) {
+            console.warn("no whole url, please call setQuery firstly")
+            return
+        }
         if (UseCacheConfig.EnableLog) console.log("fetch from remote... url=" + wholeUrl)
 
         const get = UseCacheConfig.request?.get
@@ -114,7 +118,7 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
         get(wholeUrl)
             .then(res => {
                 setIsLoading(false)
-               setUseCache(true)
+                setUseCache(true)
 
                 const box: DataBox<T[]> = res.data
                 const data = getDataFromBox(box)
@@ -154,10 +158,10 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
                 if (onDone) onDone(data)
 
 
-                  setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
+                setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
             })
             .catch(err => {
-                  setUseCache(true)
+                setUseCache(false) //出错了，可以重试重新加载
 
                 //报告数据请求结束
                 if (onDone) onDone()
@@ -177,8 +181,8 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
     }
 
     useEffect(() => {
-        if (UseCacheConfig.EnableLog) 
-            console.log("in useCacheList useEffect, try load from local or remote, refreshCount="+refreshCount+ ", wholeUrl="+wholeUrl)
+        if (UseCacheConfig.EnableLog)
+            console.log("in useCacheList useEffect, try load from local or remote, refreshCount=" + refreshCount + ", wholeUrl=" + wholeUrl)
         setIsLoading(true)
         if (current.useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
@@ -189,16 +193,16 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
                 setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
             } else {
                 if (UseCacheConfig.EnableLog) console.log("no local cache, try from remote...")
-                fetchDataFromRemote(wholeUrl, current.isLoadMore, current.pageSize)//无缓存时从远程加载
+                fetchDataFromRemote(current.isLoadMore, current.pageSize, wholeUrl)//无缓存时从远程加载
             }
         } else {
             if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
-            fetchDataFromRemote(wholeUrl,current.isLoadMore,  current.pageSize)
+            fetchDataFromRemote(current.isLoadMore, current.pageSize, wholeUrl)
         }
 
     }, [wholeUrl, refreshCount])//变化导致重新加载 
 
-    return { isLoading, isError, errMsg, loadMoreState,  list,  refreshCount, setList, fetchDataFromRemote, setQuery, setRefresh, setUseCache, setIsLoadMore }
+    return { isLoading, isError, errMsg, loadMoreState, list, refreshCount, setList, fetchDataFromRemote, setQuery, setRefresh, setUseCache, setIsLoadMore }
 }
 
 
