@@ -14,16 +14,19 @@ function query2Params<Q extends PaginationQueryBase>(query?: Q) {
 
     //将PaginationQueryBase的pagination编码为umi后，去除它 
     // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
-    if (query.pagination) query.umi = encodeUmi(query.pagination)
-    query.pagination = undefined
+    const newQuery = {...query, umi: (query.pagination)?  encodeUmi(query.pagination): undefined, pagination: undefined}
+   
+    //不可直接操作，否则修改了原值，因为是引用
+   // if (query.pagination) query.umi = encodeUmi(query.pagination)
+   // query.pagination = undefined
 
     if (UseCacheConfig.EnableLog)
         console.log("query2Params: newQuery=" + JSON.stringify(query))
 
     const tempArray: string[] = [];
-    for (const item in query) {
+    for (const item in newQuery) {
         if (item) {
-            const value = query[item]
+            const value = newQuery[item]
             if (value === null || value === undefined || value === "") {
                 if (UseCacheConfig.EnableLog) console.log(`query2Params: no value for ${item}, ignore`)
             } else {
@@ -76,7 +79,7 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
     //refresh用于刷新本地list数据, 如修改后返回list时，需刷新 setQuery也能达到同样效果，但往往用于从远程加载
     const [refreshCount, setRefreshCount] = useState(0) //修改将触发useEffect中的加载数据
 
-    if (UseCacheConfig.EnableLog) console.log("call useCacheList2, wholeUrl=" + wholeUrl + ", list=" + list)
+    if (UseCacheConfig.EnableLog) console.log("call useCacheList, wholeUrl: " + wholeUrl + ", current list.length: " + list.length)
 
     //加载数据时的配置，渲染后它们得到修改，下次渲染时使用他们的最新值
     const { current } = useRef({
@@ -96,7 +99,7 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
     //调用它，若参数变化，将重新加载数据，往往是远程数据
     const setQuery = (query?: Q) => {
         if (UseCacheConfig.EnableLog)
-            console.log("update query for wholeUrl...query=" + JSON.stringify(query))
+            console.log("setQuery: " + JSON.stringify(query))
         setWholeUrl(url + query2Params(query))
     }
 
@@ -136,13 +139,14 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
                             setLoadMoreState(newState)
                             if (shortKey) saveLoadMoreState(shortKey, newState)
                         }
-
+                        if (UseCacheConfig.EnableLog) console.log("return from remote server: list.length: " + data.length)
                     } else {
                         setIsError(true)
                         if (needLoadMore) {
                             setErrMsg("no data")
                             if (shortKey) saveLoadMoreState(shortKey, false)
                         }
+                        if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
                     }
                 } else {
                     setIsError(true)
@@ -151,7 +155,7 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
                         if (shortKey) saveLoadMoreState(shortKey, false)
                     }
                     setErrMsg(box.msg || box.code)
-                    if (UseCacheConfig.EnableLog) console.log("useCacheList: fail from remote server: code=" + box.code + ",msg=" + box.msg)
+                    if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + box.code + ",msg=" + box.msg)
                 }
 
                 //报告数据请求结束
@@ -176,18 +180,18 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
 
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
 
-                if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server:", err)
+                if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", err)
             })
     }
 
     useEffect(() => {
         if (UseCacheConfig.EnableLog)
-            console.log("in useCacheList useEffect, try load from local or remote, refreshCount=" + refreshCount + ", wholeUrl=" + wholeUrl)
+            console.log("useCacheList useEffect, try load from local or remote, refreshCount=" + refreshCount + ", wholeUrl=" + wholeUrl)
         setIsLoading(true)
         if (current.useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
             if (v) {
-                if (UseCacheConfig.EnableLog) console.log("fetch from local cache... shortKey=" + shortKey)
+                if (UseCacheConfig.EnableLog) console.log("fetch from local cache, shortKey:" + shortKey+ ", list.length: "+v.length)
                 setList(v)
                 setIsLoading(false)
                 setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态

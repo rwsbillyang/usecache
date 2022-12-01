@@ -23,6 +23,7 @@ export const Cache = {
             if (arry && arry.length > 0) {
                 for (let i = 0; i < arry.length; i++) {
                     if (arry[i][myKey] === identity) {
+                        if (UseCacheConfig.EnableLog) console.log("Cache.findOne: found, shortKey: " + shortKey)
                         return arry[i]
                     }
                 }
@@ -48,6 +49,7 @@ export const Cache = {
                         }
                     }
                 }
+                if (UseCacheConfig.EnableLog) console.log("Cache.findMany: found, shortKey: " + shortKey)
                 return arry
             }
         }
@@ -77,7 +79,7 @@ export const Cache = {
         } else
             CacheStorage.saveObject(shortKey, [e])
 
-        console.log("onAddOne done")
+        if (UseCacheConfig.EnableLog) console.log("Cache.onAddOne: done, shortKey: "+shortKey)
     },
 
 
@@ -101,17 +103,17 @@ export const Cache = {
                 //搜索现有列表，找到后更新
                 for (let i = 0; i < arry.length; i++) {
                     if (arry[i][myKey] === e[myKey]) {
-                        if (UseCacheConfig.EnableLog) console.log(`onEditOne, e[${myKey}]=${e[myKey]}, shortKey=${shortKey}`)
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne, e[${myKey}]=${e[myKey]}, shortKey: ${shortKey}`)
                         arry[i] = e
                         CacheStorage.saveObject(shortKey, arry)
                         return;
                     }
                 }
-                if (UseCacheConfig.EnableLog) console.log(`onEditOne：not found in list, key=${myKey}, shortKey=${shortKey}`)
+                if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne：not found in list, key=${myKey}, shortKey: ${shortKey}`)
                 return
             }
         } else
-            if (UseCacheConfig.EnableLog) console.log("onEditOne：not found list: shortKey=" + shortKey)
+            if (UseCacheConfig.EnableLog) console.log("Cache.onEditOne：not found list: shortKey: " + shortKey)
     },
 
 
@@ -144,13 +146,15 @@ export const Cache = {
                     }
                 }
                 CacheStorage.saveItem(shortKey, JSON.stringify(arry))
+                if (UseCacheConfig.EnableLog) console.log("Cache.onEditMany: updateMany done, shortKey: " + shortKey)
                 return
             } else {
                 CacheStorage.saveItem(shortKey, JSON.stringify(list))
+                if (UseCacheConfig.EnableLog) console.log("Cache.onEditMany: insert done, shortKey: " + shortKey)
                 return
             }
         } else
-            if (UseCacheConfig.EnableLog) console.log("onEditMany: not found list, shortKey=" + shortKey)
+            if (UseCacheConfig.EnableLog) console.log("Cache.onEditMany: not found list, shortKey: " + shortKey)
     },
 
 
@@ -174,9 +178,9 @@ export const Cache = {
                 //搜索现有列表，找到后删除
                 for (let i = 0; i < arry.length; i++) {
                     if (arry[i][myKey] === id) {
-                        if (UseCacheConfig.EnableLog) console.log(`del one: ${myKey}=${id}`)
                         arry.splice(i, 1)
                         CacheStorage.saveItem(shortKey, JSON.stringify(arry))
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOneById: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
                         return arry;
                     }
                 }
@@ -202,8 +206,9 @@ export const Cache = {
         const id = e[myKey]?.toString()
         if(id)
             Cache.onDelOneById(shortKey, id, key, storageType)
+            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOne: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
         else{
-            console.log("onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
+            console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
         }
         return undefined
     },
@@ -230,12 +235,13 @@ export const Cache = {
                     for (let j = 0; j < ids.length; j++) {
                         const value = ids[j]
                         if (arry[i][myKey] === value) {
-                            if (UseCacheConfig.EnableLog) console.log(`del one: ${myKey}=${value}`)
+                            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${myKey}=${value}, shortKey: ${shortKey}`)
                             arry.splice(i, 1)
                         }
                     }
                 }
                 CacheStorage.saveItem(shortKey, JSON.stringify(arry))
+                if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del done, shortKey: ${shortKey}`)
                 return arry;
             }
         }
@@ -258,7 +264,7 @@ export const Cache = {
         if(ids && ids.length > 0){
             Cache.onDelManyByIds(shortKey, ids, key, storageType)
         }else{
-            console.log("onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
+            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
         }
         return undefined
     },
@@ -278,6 +284,8 @@ export const Cache = {
             sessionStorage.removeItem(key)
             localStorage.removeItem(key)
         }
+
+        if (UseCacheConfig.EnableLog) console.log("Cache.evictCache done, shortKey: "+shortKey)
     },
 
     /**
@@ -294,6 +302,7 @@ export const Cache = {
             sessionStorage.clear()
             localStorage.clear()
         }
+        if (UseCacheConfig.EnableLog) console.log("Cache.evictAllCaches done")
     },
 }
 
