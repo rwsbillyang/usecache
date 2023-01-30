@@ -1,6 +1,6 @@
 import { Cache } from "./Cache";
 import { StorageType } from "./StorageType"
-import { currentHost, UseCacheConfig } from "./UseCacheConfig"
+import { UseCacheConfig } from "./UseCacheConfig"
 import { CacheStorage } from "./CacheStorage";
 import { IRequest } from "./IRequest";
 
@@ -11,6 +11,7 @@ import { UmiListPagination } from "./UmiListPagination"
 
 import { fetchWithLoading, genericFetch, useCache } from "./useCache";
 import { useCacheList } from "./useCacheList";
+import { contains, currentHost, dateFormat, formatDate, formatDateTime, formatDuration, formatYearDateTime, serializeObject } from "./utils";
 
 
 export type { DataBox, DataBoxBase, DataBoxTableList, PaginationQueryBase, UmiListPagination, IRequest};
@@ -24,6 +25,8 @@ export {
     UseCacheConfig,
     fetchWithLoading, useCache, genericFetch,
     useCacheList,
-    currentHost, 
+    currentHost, serializeObject, contains,
+    dateFormat, formatYearDateTime, formatDateTime,formatDate,formatDuration,
+    //isExpire,expireInfo
 };
 

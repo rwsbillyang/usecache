@@ -5,6 +5,7 @@ import { UseCacheConfig } from "./UseCacheConfig";
 import { CODE, DataBox, getDataFromBox } from "./DataBox";
 import { PaginationQueryBase } from "./PaginationQueryBase";
 import { encodeUmi } from "./UmiListPagination";
+import { serializeObject } from "./utils";
 
 
 
@@ -23,19 +24,10 @@ function query2Params<Q extends PaginationQueryBase>(query?: Q) {
     if (UseCacheConfig.EnableLog)
         console.log("query2Params: newQuery=" + JSON.stringify(query))
 
-    const tempArray: string[] = [];
-    for (const item in newQuery) {
-        if (item) {
-            const value = newQuery[item]
-            if (value === null || value === undefined || value === "") {
-                if (UseCacheConfig.EnableLog) console.log(`query2Params: no value for ${item}, ignore`)
-            } else {
-                tempArray.push(`${item}=${value}`)
-            }
-        }
-    }
-    if (tempArray.length > 0) {
-        return "?" + tempArray.sort().join('&')
+        
+    const str = serializeObject(newQuery)
+    if (str) {
+        return "?" + str
     } else return ''
 
 }

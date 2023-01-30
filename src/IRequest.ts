@@ -8,7 +8,7 @@ export interface IRequest {
         /**
      * show loading when load data, eg: () => f7.preloader.show()
      */
-    showLoading: () => void
+    showLoading: (text?: string) => void
 
          /**
           * hide loading, eg: () => f7.preloader.hide()
