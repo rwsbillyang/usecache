@@ -1,30 +1,29 @@
 import { useEffect, useRef, useState } from "react";
+import { cachedFetch } from "./cachedFetch";
 
 import { CacheStorage } from "./CacheStorage";
-import { UseCacheConfig } from "./UseCacheConfig";
-import { CODE, DataBox, getDataFromBox } from "./DataBox";
-import { PaginationQueryBase } from "./PaginationQueryBase";
-import { encodeUmi } from "./UmiListPagination";
+import { UseCacheConfig } from "./Config";
+import { encodeUmi, BasePageQuery } from "./QueryPagination";
 import { serializeObject } from "./utils";
 
 
 
 //去除无效参数化后，排序，然后生成：?key1=xx&key2=yy&key3=zz 形式的字符串，无参数化返回空字符”“
-function query2Params<Q extends PaginationQueryBase>(query?: Q) {
+function query2Params<Q extends BasePageQuery>(query?: Q) {
     if (!query) return ''
 
     //将PaginationQueryBase的pagination编码为umi后，去除它 
     // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
-    const newQuery = {...query, umi: (query.pagination)?  encodeUmi(query.pagination): undefined, pagination: undefined}
-   
+    const newQuery = { ...query, umi: (query.pagination) ? encodeUmi(query.pagination) : undefined, pagination: undefined }
+
     //不可直接操作，否则修改了原值，因为是引用
-   // if (query.pagination) query.umi = encodeUmi(query.pagination)
-   // query.pagination = undefined
+    // if (query.pagination) query.umi = encodeUmi(query.pagination)
+    // query.pagination = undefined
 
     if (UseCacheConfig.EnableLog)
         console.log("query2Params: newQuery=" + JSON.stringify(query))
 
-        
+
     const str = serializeObject(newQuery)
     if (str) {
         return "?" + str
@@ -48,7 +47,7 @@ function query2Params<Q extends PaginationQueryBase>(query?: Q) {
  * @param storageType cache storage type, default: sessionStorage
  * @return isLoading, isError, errMsg, list, loadMoreState, setQuery
  */
-export function useCacheList<T, Q extends PaginationQueryBase>(
+export function useCacheList<T, Q extends BasePageQuery>(
     url: string,
     shortKey?: string,
     initalQuery?: Q,
@@ -95,76 +94,57 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
         setWholeUrl(url + query2Params(query))
     }
 
-    //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
+ //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
-    const fetchDataFromRemote = (isLoadMore: boolean, pageSize: number, wholeUrl?: string, onDone?: (data?: T[]) => void) => {
-        if (!wholeUrl) {
-            console.warn("no whole url, please call setQuery firstly")
-            return
-        }
-        if (UseCacheConfig.EnableLog) console.log("fetch from remote... url=" + wholeUrl)
-
-        const get = UseCacheConfig.request?.get
-        if (!get) {
-            console.warn("please inject get request firstly")
-            return
-        }
-
-        get(wholeUrl)
-            .then(res => {
-                setIsLoading(false)
-                setUseCache(true)
-
-                const box: DataBox<T[]> = res.data
-                const data = getDataFromBox(box)
-                if (box.code === CODE.OK) {
-                    if (data) {
-                        setIsError(false)
-
-                        const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
-                        setList(result)
-
-                        if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
-
-                        if (needLoadMore) {//每次渲染时捕获传来的最新值
-                            const newState = data.length >= pageSize
-                            setLoadMoreState(newState)
-                            if (shortKey) saveLoadMoreState(shortKey, newState)
-                        }
-                        if (UseCacheConfig.EnableLog) console.log("return from remote server: list.length: " + data.length)
-                    } else {
-                        setIsError(true)
-                        if (needLoadMore) {
-                            setErrMsg("no data")
-                            if (shortKey) saveLoadMoreState(shortKey, false)
-                        }
-                        if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
-                    }
-                } else {
-                    setIsError(true)
-                    if (needLoadMore) {
-                        setLoadMoreState(false)
-                        if (shortKey) saveLoadMoreState(shortKey, false)
-                    }
-                    setErrMsg(box.msg || box.code)
-                    if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + box.code + ",msg=" + box.msg)
-                }
-
-                //报告数据请求结束
-                if (onDone) onDone(data)
-
-
+    const fetchFromRemote = (isLoadMore: boolean, pageSize: number, wholeUrl: string) => cachedFetch<T[]>(
+        {
+            url: wholeUrl, 
+            method: "GET",
+            attachAuthHeader: true,
+            storageType,
+            isShowLoading: true,
+            onDone: () => {      
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
-            })
-            .catch(err => {
-                setUseCache(false) //出错了，可以重试重新加载
+            },
+            onOK: (data) => {
+                setIsError(false)
+                setUseCache(true)
+                const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
+                setList(result)
 
-                //报告数据请求结束
-                if (onDone) onDone()
+                if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
+
+                if (needLoadMore) {//每次渲染时捕获传来的最新值
+                    const newState = data.length >= pageSize
+                    setLoadMoreState(newState)
+                    if (shortKey) saveLoadMoreState(shortKey, newState)
+                }
+                if (UseCacheConfig.EnableLog) console.log("return from remote server: list.length: " + data.length)
+               
+            },
+            onKO: (code, msg) => {
+                setIsError(true)
+                if (needLoadMore) {
+                    setLoadMoreState(false)
+                    if (shortKey) saveLoadMoreState(shortKey, false)
+                }
+                setErrMsg(code + ": " + msg)
+                if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + code + ", msg=" + msg)
+            },
+            onNoData: () => {
+                setIsError(true)
+                if (needLoadMore) {
+                    setErrMsg("no data")
+                    if (shortKey) saveLoadMoreState(shortKey, false)
+                }
+                if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
+            },
+            onErr: (errMsg) => {
+                setUseCache(false) //出错了，可以重试重新加载
 
                 setIsLoading(false)
                 setIsError(true)
-                setErrMsg(err.message)
+                setErrMsg(errMsg)
                 if (needLoadMore) {
                     if (shortKey) saveLoadMoreState(shortKey, false)
                     setLoadMoreState(false)
@@ -172,9 +152,91 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
 
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
 
-                if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", err)
-            })
-    }
+                if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", errMsg)
+            }
+        })
+   
+    // const fetchDataFromRemote = (isLoadMore: boolean, pageSize: number, wholeUrl?: string, onDone?: (data?: T[]) => void) => {
+    //     if (!wholeUrl) {
+    //         console.warn("no whole url, please call setQuery firstly")
+    //         return
+    //     }
+    //     if (UseCacheConfig.EnableLog) console.log("fetch from remote... url=" + wholeUrl)
+
+    //     const get = UseCacheConfig.request?.get
+    //     if (!get) {
+    //         console.warn("please inject get request firstly")
+    //         return
+    //     }
+
+    //     get(wholeUrl).then(response => {
+    //         setIsLoading(false)
+    //         if (response.ok) {
+    //             setUseCache(true)
+    //             return response.json()
+    //         } else {
+    //             const msg = response.status + ": " + response.statusText
+    //             console.warn("useCacheList: " + msg)
+    //             throw new Error(msg);
+    //         }
+    //     }).then(json => {
+    //         const box: DataBox<T[]> = json
+    //         const data = getDataFromBox(box)
+    //         if (box.code === CODE.OK) {
+    //             if (data) {
+    //                 setIsError(false)
+
+    //                 const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
+    //                 setList(result)
+
+    //                 if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
+
+    //                 if (needLoadMore) {//每次渲染时捕获传来的最新值
+    //                     const newState = data.length >= pageSize
+    //                     setLoadMoreState(newState)
+    //                     if (shortKey) saveLoadMoreState(shortKey, newState)
+    //                 }
+    //                 if (UseCacheConfig.EnableLog) console.log("return from remote server: list.length: " + data.length)
+    //             } else {
+    //                 setIsError(true)
+    //                 if (needLoadMore) {
+    //                     setErrMsg("no data")
+    //                     if (shortKey) saveLoadMoreState(shortKey, false)
+    //                 }
+    //                 if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
+    //             }
+    //         } else {
+    //             setIsError(true)
+    //             if (needLoadMore) {
+    //                 setLoadMoreState(false)
+    //                 if (shortKey) saveLoadMoreState(shortKey, false)
+    //             }
+    //             setErrMsg(box.msg || box.code)
+    //             if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + box.code + ",msg=" + box.msg)
+    //         }
+
+    //         //报告数据请求结束
+    //         if (onDone) onDone(data)
+    //         setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
+    //     }).catch(err => {
+    //         setUseCache(false) //出错了，可以重试重新加载
+
+    //         //报告数据请求结束
+    //         if (onDone) onDone()
+
+    //         setIsLoading(false)
+    //         setIsError(true)
+    //         setErrMsg(err.message)
+    //         if (needLoadMore) {
+    //             if (shortKey) saveLoadMoreState(shortKey, false)
+    //             setLoadMoreState(false)
+    //         }
+
+    //         setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
+
+    //         if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", err)
+    //     })
+    // }
 
     useEffect(() => {
         if (UseCacheConfig.EnableLog)
@@ -183,22 +245,28 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
         if (current.useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
             if (v) {
-                if (UseCacheConfig.EnableLog) console.log("fetch from local cache, shortKey:" + shortKey+ ", list.length: "+v.length)
+                if (UseCacheConfig.EnableLog) console.log("fetch from local cache, shortKey:" + shortKey + ", list.length: " + v.length)
                 setList(v)
                 setIsLoading(false)
                 setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
             } else {
                 if (UseCacheConfig.EnableLog) console.log("no local cache, try from remote...")
-                fetchDataFromRemote(current.isLoadMore, current.pageSize, wholeUrl)//无缓存时从远程加载
+                if(wholeUrl)
+                    fetchFromRemote(current.isLoadMore, current.pageSize, wholeUrl)//无缓存时从远程加载
+                else
+                    console.log("wholeUrl is not set, setQuery firstly")
             }
         } else {
             if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
-            fetchDataFromRemote(current.isLoadMore, current.pageSize, wholeUrl)
+            if(wholeUrl)
+                fetchFromRemote(current.isLoadMore, current.pageSize, wholeUrl)
+            else
+                console.log("wholeUrl is not set, setQuery firstly")
         }
 
     }, [wholeUrl, refreshCount])//变化导致重新加载 
 
-    return { isLoading, isError, errMsg, loadMoreState, list, refreshCount, setList, fetchDataFromRemote, setQuery, setRefresh, setUseCache, setIsLoadMore }
+    return { isLoading, isError, errMsg, loadMoreState, list, refreshCount, setList, setQuery, setRefresh, setUseCache, setIsLoadMore }
 }
 
 
@@ -207,12 +275,12 @@ export function useCacheList<T, Q extends PaginationQueryBase>(
  * @param shortKey 列表的缓存key，后面会自动加'/loadMore'
  */
 function getLoadMoreState(shortKey: string) {
-    const key = UseCacheConfig.cacheKeyPrefix() + shortKey + '/loadMore'
+    const key = UseCacheConfig.cacheSpace() + shortKey + '/loadMore'
     const cached = sessionStorage.getItem(key)
 
     return (cached && cached === '0') ? false : true
 }
 function saveLoadMoreState(shortKey: string, state: boolean) {
-    const key = UseCacheConfig.cacheKeyPrefix() + shortKey + '/loadMore'
+    const key = UseCacheConfig.cacheSpace() + shortKey + '/loadMore'
     sessionStorage.setItem(key, state ? '1' : '0')
 }

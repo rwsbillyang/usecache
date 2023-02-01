@@ -1,5 +1,5 @@
 import { StorageType } from "./StorageType"
-import { UseCacheConfig } from "./UseCacheConfig"
+import { UseCacheConfig } from "./Config"
 import { CacheStorage } from "./CacheStorage"
 
 export const Cache = {
@@ -274,7 +274,7 @@ export const Cache = {
      * @param storageType 
      */
     evictCache: (shortKey: string, storageType: number = UseCacheConfig.defaultStorageType) => {
-        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
+        const key = UseCacheConfig.cacheSpace() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             sessionStorage.removeItem(key)
         } else if (storageType === StorageType.OnlyLocalStorage) {

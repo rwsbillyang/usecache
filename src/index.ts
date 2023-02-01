@@ -1,31 +1,26 @@
 import { Cache } from "./Cache";
 import { StorageType } from "./StorageType"
-import { UseCacheConfig } from "./UseCacheConfig"
+import { UseCacheConfig } from "./Config"
 import { CacheStorage } from "./CacheStorage";
-import { IRequest } from "./IRequest";
 
 import { CODE, DataBox, DataBoxBase, DataBoxTableList, getDataFromBox } from "./DataBox";
-import { PaginationQueryBase } from "./PaginationQueryBase";
-import { encodeUmi } from "./UmiListPagination";
-import { UmiListPagination } from "./UmiListPagination"
-
-import { fetchWithLoading, genericFetch, useCache } from "./useCache";
+import { encodeUmi, BasePageQuery, QueryPagination } from "./QueryPagination";
+import {  useCache } from "./useCache";
 import { useCacheList } from "./useCacheList";
-import { contains, currentHost, dateFormat, formatDate, formatDateTime, formatDuration, formatYearDateTime, serializeObject } from "./utils";
+import { contains, currentHref, dateFormat, formatDate, formatDateTime, formatDuration, formatYearDateTime, serializeObject } from "./utils";
+import { cachedFetch, cachedGet, cachedPost, defaultFetchParams, FetchParams } from "./cachedFetch";
 
 
-export type { DataBox, DataBoxBase, DataBoxTableList, PaginationQueryBase, UmiListPagination, IRequest};
+export type { DataBox, DataBoxBase, DataBoxTableList, BasePageQuery, QueryPagination, FetchParams};
 
 //aim: app can import any one from "@rwsbillyang/usecache"
 export {
-    Cache,
-    CacheStorage,
+    Cache,CacheStorage,
     encodeUmi, CODE, getDataFromBox,
-    StorageType,
-    UseCacheConfig,
-    fetchWithLoading, useCache, genericFetch,
-    useCacheList,
-    currentHost, serializeObject, contains,
+    StorageType,UseCacheConfig,
+    defaultFetchParams,cachedFetch, cachedGet, cachedPost,
+    useCache,useCacheList,
+    currentHref, serializeObject, contains,
     dateFormat, formatYearDateTime, formatDateTime,formatDate,formatDuration,
     //isExpire,expireInfo
 };

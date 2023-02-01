@@ -1,5 +1,5 @@
 import { StorageType } from "./StorageType"
-import {UseCacheConfig } from "./UseCacheConfig"
+import {UseCacheConfig } from "./Config"
 
 export const CacheStorage = {
     /**
@@ -14,7 +14,7 @@ export const CacheStorage = {
             return defaultValue
     
         let v: string | null | undefined = undefined
-        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
+        const key = UseCacheConfig.cacheSpace() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             v = sessionStorage.getItem(key)
         } else if (storageType === StorageType.OnlyLocalStorage) {
@@ -56,7 +56,7 @@ export const CacheStorage = {
     saveItem:  (shortKey: string, v: string, storageType: number = StorageType.OnlySessionStorage) => {
         if (storageType === StorageType.NONE)
             return
-        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
+        const key = UseCacheConfig.cacheSpace() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             sessionStorage.setItem(key, v)
         } else if (storageType === StorageType.OnlyLocalStorage) {
@@ -83,7 +83,7 @@ export const CacheStorage = {
     remove: (shortKey: string,  storageType: number = StorageType.OnlySessionStorage) => {
         if (storageType === StorageType.NONE)
             return
-        const key = UseCacheConfig.cacheKeyPrefix() + shortKey
+        const key = UseCacheConfig.cacheSpace() + shortKey
         if (storageType === StorageType.OnlySessionStorage) {
             sessionStorage.removeItem(key)
         } else if (storageType === StorageType.OnlyLocalStorage) {

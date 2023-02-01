@@ -1,7 +1,7 @@
 /**
  * @return protocol + "//"+ host, eg: https://www.example.com
  */
-export const currentHost = () => window.location.protocol + "//" + window.location.host // window.location.protocol: https:
+export const currentHref = () => window.location.protocol + "//" + window.location.host // window.location.protocol: https:
 
 
 
@@ -11,7 +11,9 @@ export const currentHost = () => window.location.protocol + "//" + window.locati
  * @param obj
  * @param enableEmptyLog 为true时，将日志输出obj中的空值字段
  */
-export const serializeObject = (obj: object, enableEmptyLog: boolean = false) => {
+export const serializeObject = (obj?: object, enableEmptyLog: boolean = false) => {
+    if(!obj) return undefined
+    
     const tempArray: string[] = [];
     for (const item in obj) {
         if (item) {
@@ -91,24 +93,18 @@ export const formatYearDateTime = (time?: number) => {
     return dateFormat(date, "MM-dd hh:mm:ss")
 }
 
-
+/**
+ * 
+ * @param time utc long time 
+ * @returns 
+ */
 export const formatDate = (time?: number) => {
     if(!time) return ''
     const date = new Date(time)
     return dateFormat(date, "MM月dd日")
 }
 
-// export const isExpire = (time?: number) => {
-//     if(!time) return true
 
-//     return Date.now() > time
-// }
-// export const expireInfo = (time?: number) => {
-//     if(!time) return ''
-//     const date = new Date(time)
-//     const str = dateFormat(date, "yyyy年MM月dd日")
-//     return Date.now() > time ?'[已过期]'+str:'到期：'+str
-// }
 
 /**
  * TODO: 格式化
@@ -127,3 +123,15 @@ export const formatDuration = (duration?: number, attachPrompt: boolean = true, 
     if(seconds > 0) str+=seconds+"秒"
     return str
 }
+
+// export const isExpire = (time?: number) => {
+//     if(!time) return true
+
+//     return Date.now() > time
+// }
+// export const expireInfo = (time?: number) => {
+//     if(!time) return ''
+//     const date = new Date(time)
+//     const str = dateFormat(date, "yyyy年MM月dd日")
+//     return Date.now() > time ?'[已过期]'+str:'到期：'+str
+// }
