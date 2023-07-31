@@ -126,14 +126,21 @@ export function cachedFetch<T>(params: FetchParams<T>) {
 
     //default is true
     const isShowLoading = params.isShowLoading === false ? false : true 
-    if (isShowLoading && params.showLoading) params.showLoading()
+    if (isShowLoading) 
+    {
+        const showLoading = params.showLoading || UseCacheConfig.showLoading
+        if(showLoading) showLoading()
+    }
 
     if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
 
     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
     fetch(url, requestInit).then(response => {
-        if (isShowLoading && params.hideLoading) params.hideLoading()
+        if (isShowLoading && params.hideLoading){
+            const hide = params.hideLoading || UseCacheConfig.hideLoading
+            if(hide) hide()
+        } 
         if(params.onDone) params.onDone()
         if (response.ok) {
             return response.json()
@@ -170,7 +177,10 @@ export function cachedFetch<T>(params: FetchParams<T>) {
             return false;
         }
     }).catch(err => {
-        if (isShowLoading && params.hideLoading) params.hideLoading()
+        if (isShowLoading && params.hideLoading){
+            const hide = params.hideLoading || UseCacheConfig.hideLoading
+            if(hide) hide()
+        } 
         if (UseCacheConfig.EnableLog) console.log("cachedFetch exception from remote server:", err)
         if (params.onErr) params.onErr(err.message)
         else{

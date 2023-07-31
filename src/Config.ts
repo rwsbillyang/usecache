@@ -1,4 +1,5 @@
 
+import { IRequest, fetchRequest } from "./IRequest";
 import { StorageType } from "./StorageType";
 
 interface IUseCacheConfig {
@@ -7,6 +8,7 @@ interface IUseCacheConfig {
     defaultIdentiyKey: string
     defaultStorageType: number
     PageSize: number
+    request: IRequest,
     authheaders: () => {} | undefined
     /**
   * show loading when load data, eg: () => f7.preloader.show()
@@ -41,7 +43,7 @@ export const UseCacheConfig: IUseCacheConfig = {
 
     PageSize: 10, //后端默认为10，若需修改，需在前端提交umi数据，并设置此处的PageSize
 
-    //request: fetchRequest,
+    request: fetchRequest,
     authheaders:  () => undefined
 }
 

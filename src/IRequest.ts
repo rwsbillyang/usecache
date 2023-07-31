@@ -2,9 +2,9 @@ import { UseCacheConfig } from "./Config"
 import { serializeObject } from "./utils"
 
 /**
- * @deprecated
+ * 
  */
-interface IRequest {
+export interface IRequest {
     get: (url: string, data?: object) => Promise<Response> 
     post: (url: string, data?: object) => Promise<Response>
     upload: (url: string, data: ArrayBuffer|Blob) => Promise<Response>

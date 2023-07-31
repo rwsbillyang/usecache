@@ -11,7 +11,7 @@ export interface BasePageQuery {
 
 /**
  * pagination parameters
- * @field pageSize default 10
+ * @field pageSize default 10 若为-1则表示全部数据
  * @field current 从1起步，若指定了大于0的值，则优先使用页码分页，而不采用lastId. 对于某些排序值不唯一的场景，不适合用lastId进行分页，应指定current为1
  * @field sKey sortKey
  * @field sKeyType 排序的健不一定都是ObjectID类型，亦即lastId的后端类型，有可能是number或string类型，后端定义了三种类型：  TypeNumber  TypeString TypeObjectId
@@ -21,13 +21,13 @@ export interface BasePageQuery {
  * @field filters 暂未用上
  */
  export interface QueryPagination{
-    pageSize?: number;
-    current?: number; 
-    sKey?: string; //sortKey
-    sKeyType?: "TypeObjectId" | "TypeString" | "TypeNumber";
-    sort?: number; //1用于升序，而-1用于降序
+    pageSize?: number, //-1 means all data, not pagination
+    current?: number,// if > 0, means use pageIndex and PageSize, not use lastId
+    sKey?: string, //sortKey
+    sKeyType?: "TypeObjectId" | "TypeString" | "TypeNumber",
+    sort?: number,//1用于升序，而-1用于降序
     lastId?: string,
-    fKey?: string; //filter key
+    fKey?: string, //filter key
     filters?: string[]
 }
 
