@@ -9,7 +9,7 @@ import { serializeObject } from "./utils";
 
 
 //去除无效参数化后，排序，然后生成：?key1=xx&key2=yy&key3=zz 形式的字符串，无参数化返回空字符”“
-function query2Params<Q extends BasePageQuery>(query?: Q) {
+export function query2Params<Q extends BasePageQuery>(query?: Q) {
     if (!query) return ''
 
     //将PaginationQueryBase的pagination编码为umi后，去除它 
@@ -107,6 +107,7 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
             },
             onOK: (data) => {
+                setIsLoading(false)
                 setIsError(false)
                 setUseCache(true)
                 const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
@@ -123,6 +124,7 @@ export function useCacheList<T, Q extends BasePageQuery>(
                
             },
             onKO: (code, msg) => {
+                setIsLoading(false)
                 setIsError(true)
                 if (needLoadMore) {
                     setLoadMoreState(false)
@@ -132,6 +134,7 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + code + ", msg=" + msg)
             },
             onNoData: () => {
+                setIsLoading(false)
                 setIsError(true)
                 if (needLoadMore) {
                     setErrMsg("no data")
@@ -140,9 +143,9 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
             },
             onErr: (errMsg) => {
+                setIsLoading(false)
                 setUseCache(false) //出错了，可以重试重新加载
 
-                setIsLoading(false)
                 setIsError(true)
                 setErrMsg(errMsg)
                 if (needLoadMore) {

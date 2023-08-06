@@ -20,6 +20,7 @@ import { serializeObject } from "./utils";
  * @param isShowLoading default true, if false, not show loading ui even if has showLoading function
  * @param showLoading show loading if provides
  * @param hideLoading hide loading if provides
+ * @param transformDataBoxFromResponseJson  tranformer from response json from remote to DataBox<T>
  */
 export interface FetchParams<T> {
     url: string,
@@ -35,7 +36,8 @@ export interface FetchParams<T> {
     onDone?: () => void,
     isShowLoading?: boolean,
     showLoading?: () => void,
-    hideLoading?: () => void,    
+    hideLoading?: () => void,  
+    transformDataBoxFromResponseJson?: (json: any) => DataBox<T>
 }
 
 export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true): FetchParams<T>{
@@ -72,7 +74,14 @@ export function cachedPost<T>(url: string, onOK: (data: T) => void, data?: objec
     return cachedFetch(p)
 }
 
-export function cachedFetch<T>(params: FetchParams<T>) {
+/**
+ * 支持缓存的远程请求,  提供对应的回调将被执行, 支持loading的显示
+ * DATATYPE为biz data类型
+ * 若提供了shortKey将首先检查key中是否有数据
+ * 若提供了showLoading/hideLoading 并打开开关，将支持loading的显示隐藏
+ * 回调类型包括：数据正常、没有数据、业务错误、请求异常等的回调
+ */
+export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
     const storageType = params.storageType === undefined ? UseCacheConfig.defaultStorageType : params.storageType
     if (params.shortKey) {
         const v = CacheStorage.getObject(params.shortKey, storageType)
@@ -150,7 +159,7 @@ export function cachedFetch<T>(params: FetchParams<T>) {
             throw new Error(msg);
         }
     }).then(json => {
-        const box: DataBox<T> = json
+        const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson? params.transformDataBoxFromResponseJson(json) : json
         if (box.code === CODE.OK) {
             const data = getDataFromBox(box)
             if (data === undefined) { //if(0)返回false if(data)判断有问题
@@ -191,4 +200,147 @@ export function cachedFetch<T>(params: FetchParams<T>) {
     })
 
     return false
+}
+
+
+/**
+ * 返回一个Promise
+ * 如果正常则resolve后的结果为T类型; 如果错误发生，reject一个string错误信息
+ * T可以为payload中的biz data，也可为其它任意包裹类型（需提供transfomFromBizData进行转换）
+ * 
+ * 若需使用缓存（先从缓存中读取，没有则从远程获取，获取后将结果保存到缓存中），则需提供shortKey，默认的storageType为UseCacheConfig.defaultStorageType，即sessionStorage中
+ * 若需将biz data转换成其它类型，则需提供transfomFromBizData转换函数； 不提供时，则T为payload biz data
+ * 若远程返回结果格式不为DataBox<T>，则需提供transformDataBoxFromResponseJson进行转换
+ * 若需自动添加auth认证时，则将attachAuthHeader设置为true
+ * 若需显示loading，则将isShowLoading设置为true，并提供showLoading/hideLoading函数
+ * @param url  remote reuqest url 
+ * @param method "GET" | "POST" | "PUT" | "DELETE"
+ * @param data search query parameters
+ * @param shortKey short cache key
+ * @param storageType UseCacheConfig.defaultStorageType
+ * @param transformDataBoxFromResponseJson tranformer from response json from remote to DataBox<T>
+ * @param transfomFromBizData tranformer from payload biz data to T if provided
+ * @param attachAuthHeader add auth header into request headers
+ * @param isShowLoading show loading when request if provide showLoading function
+ * @param showLoading show loading function
+ * @param hideLoading  hide loading function
+ */
+export const cachedFetchPromise = async <T>(
+    url: string,
+    method: "GET" | "POST" | "PUT" | "DELETE",
+    data?: object,
+    shortKey?: string,
+    storageType: number = UseCacheConfig.defaultStorageType,
+    transformDataBoxFromResponseJson?: (json: any) => DataBox<T>,
+    transfomFromBizData?:(bizData: any) => T,
+    attachAuthHeader?: boolean, //= true
+    isShowLoading: boolean = false, //default is false
+    showLoading?: () => void,
+    hideLoading?: () => void,   
+    ) =>   {
+  
+    if (shortKey) {
+        const v = CacheStorage.getObject(shortKey, storageType)
+        if (v) {
+            if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + shortKey)
+            //params.onOK(v)
+            const d = transfomFromBizData? transfomFromBizData(v) : v
+            return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void)=> resolve(d))
+        } else {
+            if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: not found value from cache, shortKey=" + shortKey)
+        }
+    }
+
+
+    let requestInit: RequestInit
+    const authHeader = attachAuthHeader === false ? undefined : UseCacheConfig.authheaders()
+    switch (method) {
+        case "GET":
+        case "DELETE":
+            {
+                const query = serializeObject(data)
+                url = url + (query ? ("?" + query) : '')
+                requestInit = {
+                    method: method,
+                    headers: new Headers({
+                        ...authHeader,
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    })
+                }
+
+                break
+            }
+        case "POST":
+        case "PUT": {
+            url = url
+            requestInit = {
+                method: method,
+                body: data ? JSON.stringify(data) : undefined,
+                headers: new Headers({
+                    ...authHeader,
+                    'Content-Type': 'application/json; charset=UTF-8'
+                })
+            }
+            break
+        }
+
+        default: {
+            console.warn("please use fetch API directly")
+            return new Promise((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "please use fetch API directly" ));
+        }
+    }
+ 
+
+    if (isShowLoading) 
+    {
+        const showLoadingFunc = showLoading || UseCacheConfig.showLoading
+        if(showLoadingFunc) showLoadingFunc()
+    }
+
+    if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
+
+    ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
+    //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
+    const p = fetch(url, requestInit).then(response => {
+        if (isShowLoading && hideLoading){
+            const hide = hideLoading || UseCacheConfig.hideLoading
+            if(hide) hide()
+        } 
+        //if(params.onDone) params.onDone()
+        if (response.ok) {
+            return response.json()
+        } else {
+            const msg = response.status + ": " + response.statusText
+            console.warn("cachedFetch: "+ msg)
+            throw new Error(msg);
+        }
+    }).then(json => {
+        const box: DataBox<any> = transformDataBoxFromResponseJson? transformDataBoxFromResponseJson(json) : json
+        if (box.code === CODE.OK) {
+            const data = box.data
+            if (data === undefined) { //if(0)返回false if(data)判断有问题
+                if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
+            } else {
+                if (shortKey) {
+                    CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
+                }
+            }
+            const d  = transfomFromBizData? transfomFromBizData(data) : data
+            return new Promise<T|undefined>(resolve => resolve(d))
+        } else {
+            if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
+       
+            return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void) => reject("code=" + box.code + ", msg=" + box.msg));
+        }
+    }).catch(err => {   
+        if (UseCacheConfig.EnableLog) 
+            console.log("cachedFetch exception from remote server:", err)
+        else{
+            console.warn("cachedFetch: no onErr handler, but has err")
+        }
+        
+        return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
+    })
+
+    return p
 }
