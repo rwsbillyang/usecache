@@ -7,25 +7,47 @@ export const Cache = {
     /**
      * find one from cache
      * @param shortKey 
-     * @param identity 
-     * @param key 
+     * @param id 
+     * @param idKey 
      * @param storageType default configed in UseCacheConfig.defaultStorageType
      * @returns 
      */
-    findOne: (shortKey: string, identity: string, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    findOne: (shortKey: string, id: string | number | undefined, idKey: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+        if(id === undefined){
+            console.log("Cache.findOne: no id")
+            return undefined
+        }
         if (storageType === StorageType.NONE)
             return undefined
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
+        const myKey = idKey? idKey : UseCacheConfig.defaultIdentiyKey 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][myKey] === identity) {
+                    if (arry[i][myKey] === id) {
                         if (UseCacheConfig.EnableLog) console.log("Cache.findOne: found, shortKey: " + shortKey)
                         return arry[i]
                     }
+                }
+            }
+        }
+        return undefined
+    },
+    findOneInArray: (arry: any[], id: string | number | undefined, idKey: string = UseCacheConfig.defaultIdentiyKey) => {
+        if(id === undefined){
+            console.log("Cache.findOneInArray: no id")
+            return undefined
+        }
+
+        const myKey = idKey? idKey : UseCacheConfig.defaultIdentiyKey 
+    
+        if (arry && arry.length > 0) {
+            for (let i = 0; i < arry.length; i++) {
+                if (arry[i][myKey] === id) {
+                    if (UseCacheConfig.EnableLog) console.log("Cache.findOneInArray: found one")
+                    return arry[i]
                 }
             }
         }

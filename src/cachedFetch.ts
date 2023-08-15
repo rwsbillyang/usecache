@@ -242,7 +242,7 @@ export const cachedFetchPromise = async <T>(
     if (shortKey) {
         const v = CacheStorage.getObject(shortKey, storageType)
         if (v) {
-            if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + shortKey)
+            if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: got value from cache, shortKey=" + shortKey)
             //params.onOK(v)
             const d = transfomFromBizData? transfomFromBizData(v) : v
             return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void)=> resolve(d))
@@ -285,7 +285,7 @@ export const cachedFetchPromise = async <T>(
         }
 
         default: {
-            console.warn("please use fetch API directly")
+            console.warn("cachedFetchPromise: please use fetch API directly")
             return new Promise((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "please use fetch API directly" ));
         }
     }
@@ -297,7 +297,7 @@ export const cachedFetchPromise = async <T>(
         if(showLoadingFunc) showLoadingFunc()
     }
 
-    if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
+    if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: from remote server...")
 
     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
@@ -311,7 +311,7 @@ export const cachedFetchPromise = async <T>(
             return response.json()
         } else {
             const msg = response.status + ": " + response.statusText
-            console.warn("cachedFetch: "+ msg)
+            console.warn("cachedFetchPromise: "+ msg)
             throw new Error(msg);
         }
     }).then(json => {
@@ -319,7 +319,7 @@ export const cachedFetchPromise = async <T>(
         if (box.code === CODE.OK) {
             const data = box.data
             if (data === undefined) { //if(0)返回false if(data)判断有问题
-                if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
+                if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: no data from remote server")
             } else {
                 if (shortKey) {
                     CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
@@ -328,15 +328,15 @@ export const cachedFetchPromise = async <T>(
             const d  = transfomFromBizData? transfomFromBizData(data) : data
             return new Promise<T|undefined>(resolve => resolve(d))
         } else {
-            if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
+            if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + box.code + ",msg=" + box.msg)
        
             return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void) => reject("code=" + box.code + ", msg=" + box.msg));
         }
     }).catch(err => {   
         if (UseCacheConfig.EnableLog) 
-            console.log("cachedFetch exception from remote server:", err)
+            console.log("cachedFetchPromise exception from remote server:", err)
         else{
-            console.warn("cachedFetch: no onErr handler, but has err")
+            console.warn("cachedFetchPromise: no onErr handler, but has err")
         }
         
         return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
