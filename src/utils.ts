@@ -1,3 +1,6 @@
+import { UseCacheConfig } from "./Config";
+import { BasePageQuery, encodeUmi } from "./QueryPagination";
+
 /**
  * @return protocol + "//"+ host, eg: https://www.example.com
  */
@@ -28,7 +31,31 @@ export const serializeObject = (obj?: object, enableEmptyLog: boolean = false) =
     
     return tempArray.length > 0 ? tempArray.sort().join('&') : undefined
 }
+/**
+ * 去除无效参数化后，排序，同时将Pagination转换为umi字符串，
+ * 然后生成：?key1=xx&key2=yy&key3=zz 形式的字符串，无参数化返回空字符”“
+ * */
+export function query2Params<Q extends BasePageQuery>(query?: Q) {
+    if (!query) return ''
 
+    //将PaginationQueryBase的pagination编码为umi后，去除它 
+    // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
+    const newQuery = { ...query, umi: (query.pagination) ? encodeUmi(query.pagination) : undefined, pagination: undefined }
+
+    //不可直接操作，否则修改了原值，因为是引用
+    // if (query.pagination) query.umi = encodeUmi(query.pagination)
+    // query.pagination = undefined
+
+    if (UseCacheConfig.EnableLog)
+        console.log("query2Params: newQuery=" + JSON.stringify(query))
+
+
+    const str = serializeObject(newQuery)
+    if (str) {
+        return "?" + str
+    } else return ''
+
+}
 /**
  * 数组array是否包含某个元素
  * @param array

@@ -3,33 +3,12 @@ import { cachedFetch } from "./cachedFetch";
 
 import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./Config";
-import { encodeUmi, BasePageQuery } from "./QueryPagination";
-import { serializeObject } from "./utils";
+import { BasePageQuery } from "./QueryPagination";
+import { query2Params } from "./utils";
 
 
 
-//去除无效参数化后，排序，然后生成：?key1=xx&key2=yy&key3=zz 形式的字符串，无参数化返回空字符”“
-export function query2Params<Q extends BasePageQuery>(query?: Q) {
-    if (!query) return ''
 
-    //将PaginationQueryBase的pagination编码为umi后，去除它 
-    // sort和pagination 已经移入query.pagination，这里将老版本中的它们去除
-    const newQuery = { ...query, umi: (query.pagination) ? encodeUmi(query.pagination) : undefined, pagination: undefined }
-
-    //不可直接操作，否则修改了原值，因为是引用
-    // if (query.pagination) query.umi = encodeUmi(query.pagination)
-    // query.pagination = undefined
-
-    if (UseCacheConfig.EnableLog)
-        console.log("query2Params: newQuery=" + JSON.stringify(query))
-
-
-    const str = serializeObject(newQuery)
-    if (str) {
-        return "?" + str
-    } else return ''
-
-}
 
 /**
  *  hook which loads list data from cache or remote with pagination

@@ -1,7 +1,8 @@
+
 import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./Config";
 import { CODE, DataBox, getDataFromBox } from "./DataBox";
-import { serializeObject } from "./utils";
+import { query2Params } from "./utils";
 
 /**
  * load data from remote server or local cache depends on shortKey
@@ -101,8 +102,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
         case "GET":
         case "DELETE":
             {
-                const query = serializeObject(params.data)
-                url = params.url + (query ? ("?" + query) : '')
+                url = params.url +  query2Params(params.data)
                 requestInit = {
                     method: params.method,
                     headers: new Headers({
@@ -258,8 +258,7 @@ export const cachedFetchPromise = async <T>(
         case "GET":
         case "DELETE":
             {
-                const query = serializeObject(data)
-                url = url + (query ? ("?" + query) : '')
+                url = url +  query2Params(data)
                 requestInit = {
                     method: method,
                     headers: new Headers({
@@ -334,12 +333,12 @@ export const cachedFetchPromise = async <T>(
         }
     }).catch(err => {   
         if (UseCacheConfig.EnableLog) 
-            console.log("cachedFetchPromise exception from remote server:", err)
+            console.log("cachedFetchPromise exception from remote server:" + err)
         else{
-            console.warn("cachedFetchPromise: no onErr handler, but has err")
+            console.warn("cachedFetchPromise: no onErr handler, but has err: " + err)
         }
-        
-        return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
+        throw Error(err)
+       // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
     })
 
     return p
