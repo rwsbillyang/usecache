@@ -1,6 +1,6 @@
 {
   "name": "@rwsbillyang/usecache",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "react hooks use cache before client fetch data from remote server, likes cache in server side before database I/O",
   "repository": {
     "type": "git",
