@@ -3,7 +3,7 @@ import { UseCacheConfig } from "./Config"
 import { CacheStorage } from "./CacheStorage"
 
 export const Cache = {
-    
+
     /**
      * find one from cache
      * @param shortKey 
@@ -13,14 +13,14 @@ export const Cache = {
      * @returns 
      */
     findOne: (shortKey: string, id: string | number | undefined, idKey: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
-        if(id === undefined){
-            if(UseCacheConfig.EnableLog)console.log("Cache.findOne: no id")
+        if (id === undefined) {
+            if (UseCacheConfig.EnableLog) console.log("Cache.findOne: no id")
             return undefined
         }
         if (storageType === StorageType.NONE)
             return undefined
 
-        const myKey = idKey? idKey : UseCacheConfig.defaultIdentiyKey 
+        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -36,13 +36,13 @@ export const Cache = {
         return undefined
     },
     findOneInArray: (arry: any[], id: string | number | undefined, idKey: string = UseCacheConfig.defaultIdentiyKey) => {
-        if(id === undefined){
+        if (id === undefined) {
             console.log("Cache.findOneInArray: no id")
             return undefined
         }
 
-        const myKey = idKey? idKey : UseCacheConfig.defaultIdentiyKey 
-    
+        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
+
         if (arry && arry.length > 0) {
             for (let i = 0; i < arry.length; i++) {
                 if (arry[i][myKey] === id) {
@@ -58,7 +58,7 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return undefined
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -96,14 +96,14 @@ export const Cache = {
             if (arry && arry.length > 0) {
                 arry.unshift(e)
                 CacheStorage.saveObject(shortKey, arry)
-            } else{
+            } else {
                 CacheStorage.saveObject(shortKey, [e])
-            }  
-        } else{
+            }
+        } else {
             CacheStorage.saveObject(shortKey, [e])
         }
-            
-        if (UseCacheConfig.EnableLog) console.log("Cache.onAddOne: done, shortKey: "+shortKey)
+
+        if (UseCacheConfig.EnableLog) console.log("Cache.onAddOne: done, shortKey: " + shortKey)
         return true
     },
 
@@ -120,7 +120,7 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -136,7 +136,7 @@ export const Cache = {
                 }
                 if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne：not found in list, key=${myKey}, shortKey: ${shortKey}`)
             }
-        } else{
+        } else {
             if (UseCacheConfig.EnableLog) console.log("Cache.onEditOne：not found list: shortKey: " + shortKey)
         }
         return false
@@ -157,7 +157,7 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey 
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let flag = false
@@ -173,11 +173,11 @@ export const Cache = {
                         }
                     }
                 }
-                if(flag){
+                if (flag) {
                     CacheStorage.saveItem(shortKey, JSON.stringify(arry))
                     if (UseCacheConfig.EnableLog) console.log("Cache.onEditMany: updateMany done, shortKey: " + shortKey)
                     return true
-                }  
+                }
             } else {
                 CacheStorage.saveItem(shortKey, JSON.stringify(list))
                 if (UseCacheConfig.EnableLog) console.log("Cache.onEditMany: insert done, shortKey: " + shortKey)
@@ -197,11 +197,11 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelOneById: (shortKey: string, id: string, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
-        if (storageType === StorageType.NONE)
+    onDelOneById: (shortKey: string, id: string | number | undefined, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+        if (id === undefined || storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let arry: any[] = JSON.parse(str)
@@ -229,16 +229,16 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-     onDelOne: (shortKey: string, e: any, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelOne: (shortKey: string, e: any, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const id = e[myKey]?.toString()
-        if(id){
+        if (id) {
             if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOne: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
             return Cache.onDelOneById(shortKey, id, key, storageType)
-        }else{
+        } else {
             console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
         }
         return false
@@ -252,11 +252,11 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelManyByIds: (shortKey: string, ids: string[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
-        if (storageType === StorageType.NONE)
+    onDelManyByIds: (shortKey: string, ids: string[] | number[] | undefined, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+        if (!ids || storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let flag = false
@@ -273,7 +273,7 @@ export const Cache = {
                         }
                     }
                 }
-                if(flag){
+                if (flag) {
                     CacheStorage.saveItem(shortKey, JSON.stringify(arry))
                     if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del done, shortKey: ${shortKey}`)
                 }
@@ -290,15 +290,15 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-     onDelMany: (shortKey: string, list: any[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelMany: (shortKey: string, list: any[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key? key : UseCacheConfig.defaultIdentiyKey
-        const ids = list.map(e => e[myKey]?.toString()).filter(e=> !!e)
-        if(ids && ids.length > 0){
-           return Cache.onDelManyByIds(shortKey, ids, key, storageType)
-        }else{
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        const ids = list.map(e => e[myKey]?.toString()).filter(e => !!e)
+        if (ids && ids.length > 0) {
+            return Cache.onDelManyByIds(shortKey, ids, key, storageType)
+        } else {
             if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
         }
         return false
@@ -320,7 +320,7 @@ export const Cache = {
             localStorage.removeItem(key)
         }
 
-        if (UseCacheConfig.EnableLog) console.log("Cache.evictCache done, shortKey: "+shortKey)
+        if (UseCacheConfig.EnableLog) console.log("Cache.evictCache done, shortKey: " + shortKey)
     },
 
     /**
@@ -339,6 +339,32 @@ export const Cache = {
         }
         if (UseCacheConfig.EnableLog) console.log("Cache.evictAllCaches done")
     },
+
+
+
+/**
+ * 从数组中移除一项
+ * @param array 
+ * @param id 
+ * @param idKey 
+ * @param storageType 
+ * @returns 成功返回true
+ */
+    removeOneFromArray: (
+        array: any[],
+        id: string | number | undefined,
+        idKey: string = UseCacheConfig.defaultIdentiyKey,
+        storageType: number = UseCacheConfig.defaultStorageType) => {
+        if (!array || array.length === 0 || id === undefined || storageType === StorageType.OnlySessionStorage) return false
+        for (let i = 0; i < array.length; i++) {
+            if (array[i][idKey] === id) {
+                array.splice(i, 1)
+                return true;
+            }
+        }
+        return false
+    },
+
 }
 
 

@@ -193,7 +193,8 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
         if (UseCacheConfig.EnableLog) console.log("cachedFetch exception from remote server:", err)
         if (params.onErr) params.onErr(err.message)
         else{
-            console.warn("cachedFetch: no onErr handler, but has err")
+            console.warn("cachedFetch: no onErr handler, but has err: "+ err.message +", throw it")
+            throw new Error(err.message);
         }
         
         return false;

@@ -10,13 +10,14 @@ import { useCacheList } from "./useCacheList";
 import { contains, currentHref, dateFormat, formatDate, formatDateTime, formatDuration, formatYearDateTime, query2Params, serializeObject } from "./utils";
 import { cachedFetch, cachedFetchPromise, cachedGet, cachedPost, defaultFetchParams, FetchParams } from "./cachedFetch";
 import { BaseRecord, MongoRecord, SqlRecord } from "./Record";
+import { TreeCache } from "./TreeCache";
 
 
 export type { DataBox, DataBoxBase, DataBoxTableList, BasePageQuery, QueryPagination, FetchParams, BaseRecord, MongoRecord, SqlRecord};
 
 //aim: app can import any one from "@rwsbillyang/usecache"
 export {
-    Cache,CacheStorage,
+    TreeCache, Cache, CacheStorage,
     encodeUmi, CODE, getDataFromBox,
     StorageType,UseCacheConfig,
     defaultFetchParams,cachedFetch, cachedGet, cachedPost,cachedFetchPromise,
@@ -25,4 +26,5 @@ export {
     dateFormat, formatYearDateTime, formatDateTime,formatDate,formatDuration,
     //isExpire,expireInfo
 };
+
 
