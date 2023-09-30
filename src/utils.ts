@@ -1,3 +1,4 @@
+import { ArrayUtil } from "./ArrayUtil";
 import { UseCacheConfig } from "./Config";
 import { BasePageQuery, encodeUmi } from "./QueryPagination";
 
@@ -56,109 +57,47 @@ export function query2Params<Q extends BasePageQuery>(query?: Q) {
     } else return ''
 
 }
-/**
- * 数组array是否包含某个元素
- * @param array
- * @param e
- */
- export function contains<T>  (array?: T[], e?: T, comparator?:((e1: T, e2: T)=> boolean)) {
-    if(!array || array.length === 0 || !e) return false
-    const c = comparator? comparator : (e1: T, e2: T)=> e1 === e2
-    for(let i = 0; i < array.length; i++){
-        if(c(array[i],e)) return true
-    }
-    return false
-}
-
-
-// 对Date的扩展，将 Date 转化为指定格式的String 
-// 月(M)、日(d)、小时(h)、分(m)、秒(s)、季度(q) 可以用 1-2 个占位符， 
-// 年(y)可以用 1-4 个占位符，毫秒(S)只能用 1 个占位符(是 1-3 位的数字) 
-// 例子： 
-// (new Date()).format("yyyy-MM-dd hh:mm:ss.S") ==> 2006-07-02 08:09:04.423 
-// (new Date()).format("yyyy-M-d h:m:s.S")      ==> 2006-7-2 8:9:4.18 
-export function dateFormat(date: Date, fmt: string) {    
-    let myMap = new Map<string, number>();
-    myMap.set("M+", date.getMonth() + 1); //月份 
-    myMap.set("d+", date.getDate()); //日
-    myMap.set("h+", date.getHours()); //小时 
-    myMap.set("m+", date.getMinutes()); //分 
-    myMap.set("s+", date.getSeconds()); //秒 
-    myMap.set("q+", Math.floor((date.getMonth() + 3) / 3)); //季度 
-    myMap.set("S", date.getMilliseconds() )//毫秒 
-
-
-    //console.log("format size="+ myMap.size)
-    if (/(y+)/.test(fmt))
-        fmt = fmt.replace(RegExp.$1, (date.getFullYear() + "").substr(4 - RegExp.$1.length));
-
-    myMap.forEach((value , key) =>{
-       // console.log(`key=${key}, value=${value}`);
-        if (new RegExp("(" + key + ")").test(fmt)){
-            fmt = fmt.replace(RegExp.$1, (RegExp.$1.length === 1) ? value.toString() : (("00" + value).substr(("" + value).length)));
-        }
-    });
-
-    return fmt;
-}
 
 /**
- * 格式UTC时间 输出形如： 2019-12-02 08:09:04
- * */
-export const formatYearDateTime = (time?: number) => {
-    if(!time) return ''
-    const date = new Date(time)
-    return dateFormat(date, "yyyy-MM-dd hh:mm:ss")
-}
-
-/**
-  * 格式UTC时间 输出形如： 12-02 08:09:04
-  * */
- export const formatDateTime = (time?: number) => {
-    if(!time) return ''
-    const date = new Date(time)
-    return dateFormat(date, "MM-dd hh:mm:ss")
-}
-
-/**
- * 
- * @param time utc long time 
+ * 基于 https://juejin.cn/post/6844904042322198541改进：
+ * 增加忽略的键，该键的值不被deepCopy
+ * @param data 
+ * @param ignoreDeepKeys 忽略deepcopy的键数组，该键的值不被深拷贝
+ * @param hash 
  * @returns 
  */
-export const formatDate = (time?: number) => {
-    if(!time) return ''
-    const date = new Date(time)
-    return dateFormat(date, "MM月dd日")
+export function deepCopy(data: object, ignoreDeepKeys?: string[], hash = new WeakMap()) {
+    if (typeof data !== 'object' || data === null) {
+        throw new TypeError('传入参数不是对象')
+    }
+    // 判断传入的待拷贝对象的引用是否存在于hash中
+    if (hash.has(data)) {
+        return hash.get(data)
+    }
+
+    let newData = {};
+    const dataKeys = Object.keys(data);
+    dataKeys.forEach(key => {
+        const currentDataValue = data[key];
+        // 基本数据类型的值和函数直接赋值拷贝 或者是忽略的键
+        if (typeof currentDataValue !== "object" || currentDataValue === null || ArrayUtil.contains(ignoreDeepKeys, key)) {
+            newData[key] = currentDataValue;
+        } else if (Array.isArray(currentDataValue)) {
+            // 实现数组的深拷贝
+            newData[key] = [...currentDataValue];
+        } else if (currentDataValue instanceof Set) {
+            // 实现set数据的深拷贝
+            newData[key] = new Set([...currentDataValue]);
+        } else if (currentDataValue instanceof Map) {
+            // 实现map数据的深拷贝
+            newData[key] = new Map([...currentDataValue]);
+        } else {
+            // 将这个待拷贝对象的引用存于hash中
+            hash.set(data, data)
+            // 普通对象则递归赋值
+            newData[key] = deepCopy(currentDataValue, ignoreDeepKeys, hash);
+        }
+    });
+    return newData;
 }
 
-
-
-/**
- * TODO: 格式化
- * @param duration 单位秒
- */
-export const formatDuration = (duration?: number, attachPrompt: boolean = true, prefix="阅读：") => {
-    if(!duration) return ""
-
-    const hours = Math.floor(duration / 3600)
-    const minitues = Math.floor((duration - hours*3600)/60)
-    const seconds = Math.floor(duration - hours*3600 -  minitues*60)
-    
-    let str = attachPrompt ? prefix:""
-    if(hours > 0) str+=hours+"小时"
-    if(minitues > 0) str+=minitues+"分"
-    if(seconds > 0) str+=seconds+"秒"
-    return str
-}
-
-// export const isExpire = (time?: number) => {
-//     if(!time) return true
-
-//     return Date.now() > time
-// }
-// export const expireInfo = (time?: number) => {
-//     if(!time) return ''
-//     const date = new Date(time)
-//     const str = dateFormat(date, "yyyy年MM月dd日")
-//     return Date.now() > time ?'[已过期]'+str:'到期：'+str
-// }

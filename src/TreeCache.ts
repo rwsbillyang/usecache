@@ -2,6 +2,7 @@ import { UseCacheConfig } from "./Config"
 import { StorageType } from "./StorageType"
 import { CacheStorage } from "./CacheStorage"
 import { Cache } from "./Cache"
+import { ArrayUtil } from "./ArrayUtil"
 
 
 export const TreeCache = {
@@ -20,7 +21,7 @@ export const TreeCache = {
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
-        debug: boolean = true) => {
+        debug: boolean = UseCacheConfig.EnableLog) => {
         if (storageType === StorageType.NONE) {
             if (debug) console.log("StorageType is none")
             return undefined
@@ -33,7 +34,7 @@ export const TreeCache = {
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let array: any[] = JSON.parse(str)
-            return TreeCache.getElementsByPathIdsInTree(array, path, idKey, childrenFieldName, storageType)
+            return ArrayUtil.getArrayByPathInTree(array, path, idKey, childrenFieldName)
         } else {
             if (debug) console.log("no key=" + shortKey)
         }
@@ -41,48 +42,6 @@ export const TreeCache = {
     },
 
 
-
-    /**
-     * 在缓存中返回通过path节点id路径返回对应的元素数组
-     * @param tree 
-     * @param path 
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
-     * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param storageType 缓存类型
-     */
-    getElementsByPathIdsInTree: (
-        tree?: any[],
-        path?: (string | number)[],
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
-        childrenFieldName: string = "children",
-        storageType: number = UseCacheConfig.defaultStorageType,
-        debug: boolean = true) => {
-        if (storageType === StorageType.NONE)
-            return undefined
-        if (!tree || tree.length === 0 || !path || path.length === 0) {
-            if (debug) console.log("no data tree array, or no path")
-            return undefined
-        }
-
-        //if(debug) console.log("tree array: ", tree)
-        const ret: any[] = []
-        let array = tree
-        for (let i = 0; i < path.length; i++) {
-            if (array && array.length > 0) {
-                if (debug) console.log("find " + path[i])
-                const e = Cache.findOneInArray(array, path[i], idKey)
-                if (e) {
-                    ret.push(e)
-                    array = e[childrenFieldName]
-                    //if (debug) console.log("got one, e:", e)
-                }
-            }
-        }
-        if (debug && ret.length === 0) {
-            console.log("not found elem path in tree: ", tree)
-        }
-        return ret
-    },
 
 
 
@@ -116,97 +75,13 @@ export const TreeCache = {
             let array: any[] = JSON.parse(str)
             if (all) {
                 const allPaths: any[][] = []
-                TreeCache.getAllPathFromTreeArray(allPaths, array, id, childrenFieldName, idKey)
+                ArrayUtil.findAllFromTree(allPaths, array, id, childrenFieldName, idKey)
                 return allPaths
             } else {
-                return TreeCache.getOnePathFromTreeArray(array, id, childrenFieldName, idKey)?.reverse()
+                return ArrayUtil.findOneFromTree(array, id, childrenFieldName, idKey)?.reverse()
             }
         }
         return undefined
-    },
-
-
-
-
-    /**
-     * 从数组rootArray中，找到一条命中路径
-     * @param rootArray 数组
-     * @param id 待查找的元素id
-     * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
-     * @returns 返回数组：叶节点排最前，根节点最后
-     */
-    getOnePathFromTreeArray: (
-        rootArray: any[],
-        id?: string | number | undefined,
-        childrenFieldName: string = "children",
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
-        debug: boolean = false): any[] | undefined => {
-
-        if (!rootArray || !id) return undefined
-
-        let e
-        for (let i = 0; i < rootArray.length; i++) {
-            const path: any[] = []
-            e = rootArray[i]
-            if (debug) console.log("check id=" + e[idKey])
-            if (e[idKey] === id) {
-                path.push(e)
-                if (debug) console.log("got one: id=" + e[idKey] + ", return path=", path)
-                return path //找到一个元素即返回一个数组
-            } else {
-                if (debug) console.log("check children, id=" + e[idKey])
-                const children = e[childrenFieldName]
-                if (children) {
-                    //递归，从数组（孩子）中找到一个即返回一个数组，然后压入父节点，返回压入父节点的数组
-                    const p2: any[] | undefined = TreeCache.getOnePathFromTreeArray(children, id, childrenFieldName, idKey)
-                    if (p2) {
-                        p2.push(e)
-                        if (debug) console.log("got one in child: id=" + e[idKey] + ", return path=", p2)
-                        return p2
-                    }
-                }
-            }
-        }
-        return undefined
-    },
-
-
-    /**
-     * 
-     * @param allPaths 最后结果保存在该数组中，返回多条路径，每条路径是从根元素到所寻找叶子节点元素的数组
-     * @param rootArray 数组
-     * @param id 待查找的元素id
-     * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
-     * @param tempPath 临时变量，内部实现使用，不要传递
-     * @returns 
-     */
-    getAllPathFromTreeArray: (
-        allPaths: any[][],
-        rootArray: any[],
-        id?: string | number | undefined,
-        childrenFieldName: string = "children",
-        idKey: string = UseCacheConfig.defaultIdentiyKey, tempPath: any[] = []) => {
-        if (!rootArray || !id) return
-
-        for (let i = 0; i < rootArray.length; i++) {
-            const e = rootArray[i]
-
-            tempPath.push(e) //压入当前节点到tempPath
-
-            if (e[idKey] === id) { //找到一个， 压入path，不再对其children进行查找          
-                allPaths.push([...tempPath]) //找到后也没有return返回，而是继续该循环查找其它兄弟节点
-            } else {//没有相等，则是查找子节点
-                const children = e[childrenFieldName]
-                if (children) {
-                    //递归，在孩子数组中相同的查找，并将path传递进来，一遍记录path节点
-                    TreeCache.getAllPathFromTreeArray(allPaths, children, id, childrenFieldName, idKey, tempPath)
-                }
-            }
-
-            tempPath.pop()
-        }
     },
 
 
@@ -233,7 +108,7 @@ export const TreeCache = {
         childrenFieldName: string = "children",
         beforeAddIfNotRoot?: (parentPath: any[], parent: any) => void, // e.parentPath = [...parent.parentPath, e[idKey]]
         storageType: number = UseCacheConfig.defaultStorageType,
-        debug: boolean = true) => {
+        debug: boolean = UseCacheConfig.EnableLog) => {
         if (storageType === StorageType.NONE) {
             return false
         }
@@ -286,7 +161,7 @@ export const TreeCache = {
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
-        debug: boolean = true) => {
+        debug: boolean = UseCacheConfig.EnableLog) => {
         if (storageType === StorageType.NONE) {
             return false
         }
@@ -351,7 +226,7 @@ export const TreeCache = {
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
-        debug: boolean = true
+        debug: boolean = UseCacheConfig.EnableLog
     ) => {
         if (storageType === StorageType.NONE) {
             return false

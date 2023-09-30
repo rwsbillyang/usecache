@@ -35,24 +35,7 @@ export const Cache = {
         }
         return undefined
     },
-    findOneInArray: (arry: any[], id: string | number | undefined, idKey: string = UseCacheConfig.defaultIdentiyKey) => {
-        if (id === undefined) {
-            console.log("Cache.findOneInArray: no id")
-            return undefined
-        }
 
-        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
-
-        if (arry && arry.length > 0) {
-            for (let i = 0; i < arry.length; i++) {
-                if (arry[i][myKey] === id) {
-                    if (UseCacheConfig.EnableLog) console.log("Cache.findOneInArray: found one")
-                    return arry[i]
-                }
-            }
-        }
-        return undefined
-    },
 
     findMany: (shortKey: string, identities: string[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
@@ -342,28 +325,7 @@ export const Cache = {
 
 
 
-/**
- * 从数组中移除一项
- * @param array 
- * @param id 
- * @param idKey 
- * @param storageType 
- * @returns 成功返回true
- */
-    removeOneFromArray: (
-        array: any[],
-        id: string | number | undefined,
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
-        storageType: number = UseCacheConfig.defaultStorageType) => {
-        if (!array || array.length === 0 || id === undefined || storageType === StorageType.OnlySessionStorage) return false
-        for (let i = 0; i < array.length; i++) {
-            if (array[i][idKey] === id) {
-                array.splice(i, 1)
-                return true;
-            }
-        }
-        return false
-    },
+
 
 }
 
