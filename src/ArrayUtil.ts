@@ -283,15 +283,40 @@ export const ArrayUtil = {
         }
     },
 
-    traverseTree: function <T, R> (treeData: T[], doSth: (e: T, args?: any) => R, childrenName = "children", args?: any){
+    /**
+     * 对tree进行变换，得到新tree，不影响原tree数据
+     * @param treeData 
+     * @param transform 
+     * @param childrenName 
+     * @param args 
+     * @returns 
+     */
+    transformTree: function <T, R> (treeData: T[], transform: (e: T, args?: any) => R, childrenName = "children", args?: any){
         const list: R[] = []
         if(treeData.length === 0) return list
         treeData.forEach((e) => {
-            const r = doSth(e, args)
+            const r = transform(e, args)
             const children = e[childrenName]
-            if(children) r[childrenName] = ArrayUtil.traverseTree(children, doSth, childrenName, args)
+            if(children) r[childrenName] = ArrayUtil.transformTree(children, transform, childrenName, args)
             list.push(r)
         })
         return list
+    },
+
+    /**
+     * 对tree每个节点执行类似于forEach的遍历操作
+     * @param treeData 
+     * @param doSth 
+     * @param childrenName 
+     * @param args 
+     * @returns 
+     */
+    traverseTree: function <T> (treeData: T[], doSth: (e: T, args?: any) => void, childrenName = "children", args?: any){
+        if(treeData.length === 0) return 
+        treeData.forEach((e) => {
+            doSth(e, args)
+            const children = e[childrenName]
+            if(children)  ArrayUtil.traverseTree(children, doSth, childrenName, args)
+        })
     }
 }

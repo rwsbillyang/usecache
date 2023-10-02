@@ -33,44 +33,44 @@ export interface FetchParams<T> {
     onOK: (data: T) => void,
     onNoData?: () => void,
     onKO?: (code: string, msg?: string) => void,
-    onErr?:(msg: string) => void,
+    onErr?: (msg: string) => void,
     onDone?: () => void,
     isShowLoading?: boolean,
     showLoading?: () => void,
-    hideLoading?: () => void,  
+    hideLoading?: () => void,
     transformDataBoxFromResponseJson?: (json: any) => DataBox<T>
 }
 
-export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true): FetchParams<T>{
+export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true): FetchParams<T> {
     const p: FetchParams<T> = {
-        url, data, shortKey, 
+        url, data, shortKey,
         method: "GET",
-        attachAuthHeader,isShowLoading,
+        attachAuthHeader, isShowLoading,
         storageType: UseCacheConfig.defaultStorageType,
         onOK,
         onNoData: () => {
             if (UseCacheConfig.EnableLog) console.log("defaultFetchParams: onNoData, no data from remote server")
-            if(UseCacheConfig.showToast) UseCacheConfig.showToast("no data")
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast("no data")
         },
-        onKO:(code, msg) => {
+        onKO: (code, msg) => {
             if (UseCacheConfig.EnableLog) console.log("defaultFetchParams: onKO from remote server: code=" + code + ", msg=" + msg)
-            if(UseCacheConfig.showToast) UseCacheConfig.showToast(code + ":" + msg)
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast(code + ":" + msg)
         },
         onErr: (errMsg) => {
             if (UseCacheConfig.EnableLog) console.log("defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
-            if(UseCacheConfig.showToast) UseCacheConfig.showToast(errMsg)
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast(errMsg)
         }
     }
     return p
 }
 
-export function cachedGet<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true){
-    const p = defaultFetchParams<T>(url, onOK, data, shortKey,isShowLoading,attachAuthHeader)
+export function cachedGet<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true) {
+    const p = defaultFetchParams<T>(url, onOK, data, shortKey, isShowLoading, attachAuthHeader)
     p.method = "GET"
     return cachedFetch(p)
 }
-export function cachedPost<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true){
-    const p = defaultFetchParams<T>(url, onOK, data, shortKey,isShowLoading,attachAuthHeader)
+export function cachedPost<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true) {
+    const p = defaultFetchParams<T>(url, onOK, data, shortKey, isShowLoading, attachAuthHeader)
     p.method = "POST"
     return cachedFetch(p)
 }
@@ -102,7 +102,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
         case "GET":
         case "DELETE":
             {
-                url = params.url +  query2Params(params.data)
+                url = params.url + query2Params(params.data)
                 requestInit = {
                     method: params.method,
                     headers: new Headers({
@@ -134,11 +134,10 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
     }
 
     //default is true
-    const isShowLoading = params.isShowLoading === false ? false : true 
-    if (isShowLoading) 
-    {
+    const isShowLoading = params.isShowLoading === false ? false : true
+    if (isShowLoading) {
         const showLoading = params.showLoading || UseCacheConfig.showLoading
-        if(showLoading) showLoading()
+        if (showLoading) showLoading()
     }
 
     if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
@@ -146,27 +145,27 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
     fetch(url, requestInit).then(response => {
-        if (isShowLoading && params.hideLoading){
+        if (isShowLoading && params.hideLoading) {
             const hide = params.hideLoading || UseCacheConfig.hideLoading
-            if(hide) hide()
-        } 
-        if(params.onDone) params.onDone()
+            if (hide) hide()
+        }
+        if (params.onDone) params.onDone()
         if (response.ok) {
             return response.json()
         } else {
             const msg = response.status + ": " + response.statusText
-            console.warn("cachedFetch: "+ msg)
+            console.warn("cachedFetch: " + msg)
             throw new Error(msg);
         }
     }).then(json => {
-        const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson? params.transformDataBoxFromResponseJson(json) : json
+        const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson ? params.transformDataBoxFromResponseJson(json) : json
         if (box.code === CODE.OK) {
             const data = getDataFromBox(box)
             if (data === undefined) { //if(0)返回false if(data)判断有问题
                 if (params.onNoData) {
                     if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
                     params.onNoData()
-                }else{
+                } else {
                     console.log("cachedFetch: no onNoData handler")
                 }
             } else {
@@ -180,23 +179,23 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
             if (params.onKO) {
                 if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
                 params.onKO(box.code, box.msg)
-            }else{
+            } else {
                 console.log("cachedFetch: no onKO handler")
             }
             return false;
         }
     }).catch(err => {
-        if (isShowLoading && params.hideLoading){
+        if (isShowLoading && params.hideLoading) {
             const hide = params.hideLoading || UseCacheConfig.hideLoading
-            if(hide) hide()
-        } 
+            if (hide) hide()
+        }
         if (UseCacheConfig.EnableLog) console.log("cachedFetch exception from remote server:", err)
         if (params.onErr) params.onErr(err.message)
-        else{
-            console.warn("cachedFetch: no onErr handler, but has err: "+ err.message +", throw it")
+        else {
+            console.warn("cachedFetch: no onErr handler, but has err: " + err.message + ", throw it")
             throw new Error(err.message);
         }
-        
+
         return false;
     })
 
@@ -233,20 +232,20 @@ export const cachedFetchPromise = async <T>(
     shortKey?: string,
     storageType: number = UseCacheConfig.defaultStorageType,
     transformDataBoxFromResponseJson?: (json: any) => DataBox<T>,
-    transfomFromBizData?:(bizData: any) => T,
+    transfomFromBizData?: (bizData: any) => T,
     attachAuthHeader?: boolean, //= true
     isShowLoading: boolean = false, //default is false
     showLoading?: () => void,
-    hideLoading?: () => void,   
-    ) =>   {
-  
+    hideLoading?: () => void,
+) => {
+
     if (shortKey) {
         const v = CacheStorage.getObject(shortKey, storageType)
         if (v) {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: got value from cache, shortKey=" + shortKey)
             //params.onOK(v)
-            const d = transfomFromBizData? transfomFromBizData(v) : v
-            return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void)=> resolve(d))
+            const d = transfomFromBizData ? transfomFromBizData(v) : v
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => resolve(d))
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: not found value from cache, shortKey=" + shortKey)
         }
@@ -259,7 +258,7 @@ export const cachedFetchPromise = async <T>(
         case "GET":
         case "DELETE":
             {
-                url = url +  query2Params(data)
+                url = url + query2Params(data)
                 requestInit = {
                     method: method,
                     headers: new Headers({
@@ -286,15 +285,14 @@ export const cachedFetchPromise = async <T>(
 
         default: {
             console.warn("cachedFetchPromise: please use fetch API directly")
-            return new Promise((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "please use fetch API directly" ));
+            return new Promise((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => reject("please use fetch API directly"));
         }
     }
- 
 
-    if (isShowLoading) 
-    {
+
+    if (isShowLoading) {
         const showLoadingFunc = showLoading || UseCacheConfig.showLoading
-        if(showLoadingFunc) showLoadingFunc()
+        if (showLoadingFunc) showLoadingFunc()
     }
 
     if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: from remote server...")
@@ -302,20 +300,20 @@ export const cachedFetchPromise = async <T>(
     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
     const p = fetch(url, requestInit).then(response => {
-        if (isShowLoading && hideLoading){
+        if (isShowLoading && hideLoading) {
             const hide = hideLoading || UseCacheConfig.hideLoading
-            if(hide) hide()
-        } 
+            if (hide) hide()
+        }
         //if(params.onDone) params.onDone()
-        if (response.ok) {
+        if (response.status < 300 && response.ok) {
             return response.json()
         } else {
             const msg = response.status + ": " + response.statusText
-            console.warn("cachedFetchPromise: "+ msg)
+            console.warn("cachedFetchPromise: " + msg)
             throw new Error(msg);
         }
     }).then(json => {
-        const box: DataBox<any> = transformDataBoxFromResponseJson? transformDataBoxFromResponseJson(json) : json
+        const box: DataBox<any> = transformDataBoxFromResponseJson ? transformDataBoxFromResponseJson(json) : json
         if (box.code === CODE.OK) {
             const data = box.data
             if (data === undefined) { //if(0)返回false if(data)判断有问题
@@ -325,21 +323,21 @@ export const cachedFetchPromise = async <T>(
                     CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
                 }
             }
-            const d  = transfomFromBizData? transfomFromBizData(data) : data
-            return new Promise<T|undefined>(resolve => resolve(d))
+            const d = transfomFromBizData ? transfomFromBizData(data) : data
+            return new Promise<T | undefined>(resolve => resolve(d))
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + box.code + ",msg=" + box.msg)
-       
-            return new Promise<T|undefined>((resolve: (data: T|undefined)=>void, reject: (reason: string)=>void) => reject("code=" + box.code + ", msg=" + box.msg));
+
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => reject("code=" + box.code + ", msg=" + box.msg));
         }
-    }).catch(err => {   
-        if (UseCacheConfig.EnableLog) 
+    }).catch(err => {
+        if (UseCacheConfig.EnableLog)
             console.log("cachedFetchPromise exception from remote server:" + err)
-        else{
+        else {
             console.warn("cachedFetchPromise: no onErr handler, but has err: " + err)
         }
         throw Error(err)
-       // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
+        // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
     })
 
     return p

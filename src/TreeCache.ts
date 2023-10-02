@@ -86,10 +86,10 @@ export const TreeCache = {
      * 将数据插入到树上的一个节点中后，然后更新其缓存
      * @param shortKey 缓存键
      * @param e 待插入的数据
-     * @param parentIdPath 插入的父路径节点id数组，若为空插入到根节点
+     * @param idPath 插入的父路径节点id数组，若为空插入到根节点
      * @param idKey 父路径数组元素中取值的key，通常为id
      * @param childrenFieldName tree节点的children字段名称，默认children
-     * @param beforeAddIfNotRoot 在插入子项前，可以对数据e的parent做一些操作，比如更新其parentPath 
+     * @param updateRelation 更新亲子关系 避免对相关节点再次修改时，其亲子关系还是老旧数据，以及在插入子项前，对数据e的parent做一些操作，比如更新其parentPath 
      * eg: currentRow.parentPath = [...parent.parentPath, currentRow[idKey]]
      * @param storageType 
      * @param debug 
@@ -98,9 +98,9 @@ export const TreeCache = {
     onAddOneInTree: <T>(
         shortKey: string,
         e: T,
-        parentIdPath?: (string | number)[],
+        idPath: (string | number)[],
+        updateRelation: (parent: T, e: T, parents: T[]) => void,
         idKey: string = UseCacheConfig.defaultIdentiyKey,
-        beforeAddIfNotRoot?: (parents: T[], parent: T) => void, // 
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
         debug: boolean = UseCacheConfig.EnableLog) => {
@@ -108,22 +108,23 @@ export const TreeCache = {
             return false
         }
 
-        if (!parentIdPath || parentIdPath.length === 0) {//root node
+        if (idPath.length === 0) {//root node
             Cache.onAddOne(shortKey, e, storageType)
         } else {
-            const parents: T[] | undefined = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, parentIdPath, idKey, childrenFieldName, storageType, debug)
+            const parents: T[] | undefined = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, idPath, idKey, childrenFieldName, storageType, debug)
             if (!parents || parents.length === 0) {
-                console.warn("no parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(parentIdPath))
+                console.warn("no parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(parents))
                 return false
             }
-            if (parents?.length != parentIdPath.length) {
-                console.warn("not get enough parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(parentIdPath))
+            if (parents?.length != idPath.length) {
+                console.warn("not get enough parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(idPath))
                 return false
             }
 
             const parent = parents[parents.length - 1]
 
-            if (beforeAddIfNotRoot) beforeAddIfNotRoot(parents, parent)
+            //if (beforeAddIfNotRoot) beforeAddIfNotRoot(parents, parent)
+            updateRelation(parent, e, parents)
 
             if (!parent[childrenFieldName]) {
                 parent[childrenFieldName] = [e]
@@ -205,6 +206,7 @@ export const TreeCache = {
      * @param shortKey 
      * @param e 待删除项
      * @param idPath 待删除项所在id路径
+     * @param updateRelation 更新亲子关系 避免对相关节点再次修改时，其亲子关系还是老旧数据
      * @param idKey 删除比较时所采用的键，通常为id
      * @param childrenFieldName 树形结构中孩子名称，默认为children
      * @param storageType 
@@ -215,6 +217,7 @@ export const TreeCache = {
         shortKey: string,
         e: T,
         idPath: (string | number)[],
+        updateRelation: (parent: T, e: T, parents: T[]) => void,
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
@@ -245,6 +248,9 @@ export const TreeCache = {
         }
 
         const parent = elemPath[elemPath.length - 2]
+        
+        updateRelation(parent, e, elemPath)
+
         const children = parent[childrenFieldName]
         let flag = false
         for (let i = 0; i < children.length; i++) {
