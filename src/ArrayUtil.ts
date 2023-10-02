@@ -116,12 +116,13 @@ export const ArrayUtil = {
 
 
     /**
-     * 通过id path，在树形数组中找到各元素，以数组返回
-     * @param tree 
-     * @param path 
+     * 通过id path，在树形数组中找到各元素，以数组返回 
+     * 不保证path长度与返回的数组长度一致
+     * @param tree 树形数组
+     * @param path 节点id数组，用于定位：根节点id->子节点id
      * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param debug 缓存类型
+     * @param debug 是否打开日志输出 默认值UseCacheConfig.EnableLog
      */
     getArrayByPathInTree: function <T> (
         tree?: T[],
@@ -159,11 +160,11 @@ export const ArrayUtil = {
     /**
      * 通过id path，返回根节点，根节点及下面的children只保留搜索路径中的元素，其它的被去除，不影响原tree数据
      * 可用于剪除其它无关枝丫
-     * @param tree 
-     * @param path 
+     * @param tree 树形数组
+     * @param path 节点id数组，用于定位：根节点id->子节点id
      * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param debug 缓存类型
+     * @param debug 是否打开日志输出 默认值UseCacheConfig.EnableLog
      */
     trimTreeByPath: function <T> (
         tree?: T[],
@@ -282,5 +283,15 @@ export const ArrayUtil = {
         }
     },
 
-
+    traverseTree: function <T, R> (treeData: T[], doSth: (e: T, args?: any) => R, childrenName = "children", args?: any){
+        const list: R[] = []
+        if(treeData.length === 0) return list
+        treeData.forEach((e) => {
+            const r = doSth(e, args)
+            const children = e[childrenName]
+            if(children) r[childrenName] = ArrayUtil.traverseTree(children, doSth, childrenName, args)
+            list.push(r)
+        })
+        return list
+    }
 }

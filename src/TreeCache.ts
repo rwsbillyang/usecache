@@ -8,14 +8,14 @@ import { ArrayUtil } from "./ArrayUtil"
 export const TreeCache = {
 
     /**
-     * 在缓存中返回通过path节点id路径返回对应的元素数组
-     * @param shortKey 
-     * @param path 
+     * 返回通过path节点id路径，返回缓存中对应的元素数组
+     * @param shortKey cacheKey
+     * @param path 节点id路径
      * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
      * @param storageType 缓存类型
      */
-    getElementsByPathIdsInTreeFromCache: (
+    getElementsByPathIdsInTreeFromCache: <T>(
         shortKey: string,
         path?: (string | number)[],
         idKey: string = UseCacheConfig.defaultIdentiyKey,
@@ -33,7 +33,7 @@ export const TreeCache = {
 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
-            let array: any[] = JSON.parse(str)
+            let array: T[] = JSON.parse(str)
             return ArrayUtil.getArrayByPathInTree(array, path, idKey, childrenFieldName)
         } else {
             if (debug) console.log("no key=" + shortKey)
@@ -42,12 +42,8 @@ export const TreeCache = {
     },
 
 
-
-
-
-
     /**
-     * 从数组array中，根据children字段查找某节点e
+     * 从数组array中，根据children字段查找某节点e 返回路径的元素数组
      * @param shortKey 存储数组都的cache key, 由其得到待查询的数组
      * @param id 待查找的元素id
      * @param all 是否获取所有，否则只是第一个路径
@@ -56,12 +52,13 @@ export const TreeCache = {
      * @param storageType 缓存类型
      * @returns 如果all为true（默认），返回所有path路径数组，否则返回path。 path是从根节点到所寻找叶子节点的数组
      */
-    getPathFromTreeCacheKey: (
+    getPathFromTreeCacheKey: <T>(
         shortKey: string,
         id: string | number | undefined,
-        all: boolean = true, childrenFieldName: string = "children",
+        all: boolean = true, 
+        childrenFieldName: string = "children",
         idKey: string = UseCacheConfig.defaultIdentiyKey,
-        storageType: number = UseCacheConfig.defaultStorageType): any[][] | any[] | undefined => {
+        storageType: number = UseCacheConfig.defaultStorageType): T[][] | T[] | undefined => {
 
         if (id === undefined) {
             if (UseCacheConfig.EnableLog) console.log("Cache.findOne: no id")
@@ -72,9 +69,9 @@ export const TreeCache = {
 
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
-            let array: any[] = JSON.parse(str)
+            let array: T[] = JSON.parse(str)
             if (all) {
-                const allPaths: any[][] = []
+                const allPaths: T[][] = []
                 ArrayUtil.findAllFromTree(allPaths, array, id, childrenFieldName, idKey)
                 return allPaths
             } else {
@@ -85,9 +82,6 @@ export const TreeCache = {
     },
 
 
-
-
-
     /**
      * 将数据插入到树上的一个节点中后，然后更新其缓存
      * @param shortKey 缓存键
@@ -95,18 +89,19 @@ export const TreeCache = {
      * @param parentIdPath 插入的父路径节点id数组，若为空插入到根节点
      * @param idKey 父路径数组元素中取值的key，通常为id
      * @param childrenFieldName tree节点的children字段名称，默认children
-     * @param beforeAddIfNotRoot 在插入子项前，可以对数据e做一些操作，比如更新其parentPath
+     * @param beforeAddIfNotRoot 在插入子项前，可以对数据e的parent做一些操作，比如更新其parentPath 
+     * eg: currentRow.parentPath = [...parent.parentPath, currentRow[idKey]]
      * @param storageType 
      * @param debug 
      * @returns 
      */
-    onAddOneInTree: (
+    onAddOneInTree: <T>(
         shortKey: string,
-        e: any,
-        parentIdPath?: any[],
+        e: T,
+        parentIdPath?: (string | number)[],
         idKey: string = UseCacheConfig.defaultIdentiyKey,
+        beforeAddIfNotRoot?: (parents: T[], parent: T) => void, // 
         childrenFieldName: string = "children",
-        beforeAddIfNotRoot?: (parentPath: any[], parent: any) => void, // e.parentPath = [...parent.parentPath, e[idKey]]
         storageType: number = UseCacheConfig.defaultStorageType,
         debug: boolean = UseCacheConfig.EnableLog) => {
         if (storageType === StorageType.NONE) {
@@ -116,32 +111,29 @@ export const TreeCache = {
         if (!parentIdPath || parentIdPath.length === 0) {//root node
             Cache.onAddOne(shortKey, e, storageType)
         } else {
-            const parentElemPath = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, parentIdPath, idKey, childrenFieldName, storageType, debug)
-            if (!parentElemPath || parentElemPath.length === 0) {
+            const parents: T[] | undefined = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, parentIdPath, idKey, childrenFieldName, storageType, debug)
+            if (!parents || parents.length === 0) {
                 console.warn("no parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(parentIdPath))
                 return false
             }
-            if (parentElemPath?.length != parentIdPath.length) {
+            if (parents?.length != parentIdPath.length) {
                 console.warn("not get enough parentElemPath for parentIdPath, shortKey=" + shortKey + ", idKey=" + idKey + ", parentPath=" + JSON.stringify(parentIdPath))
                 return false
             }
 
-            const parent = parentElemPath[parentElemPath.length - 1]
+            const parent = parents[parents.length - 1]
 
-            if (beforeAddIfNotRoot) beforeAddIfNotRoot(parentElemPath, parent)
+            if (beforeAddIfNotRoot) beforeAddIfNotRoot(parents, parent)
 
             if (!parent[childrenFieldName]) {
                 parent[childrenFieldName] = [e]
             } else {
                 parent[childrenFieldName].push(e)
             }
-            Cache.onEditOne(shortKey, parentElemPath[0], idKey, storageType)
+            Cache.onEditOne(shortKey, parents[0], idKey, storageType)
         }
         return true
     },
-
-
-
 
 
     /**
@@ -154,10 +146,10 @@ export const TreeCache = {
      * @param storageType 
      * @param debug 
      */
-    onEditOneInTree: (
+    onEditOneInTree: <T>(
         shortKey: string,
-        e: any,
-        idPath: any[],
+        e: T,
+        idPath: (string | number)[],
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
@@ -170,7 +162,7 @@ export const TreeCache = {
             return false
         }
 
-        const elemPath = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, idPath, idKey, childrenFieldName, storageType, debug)
+        const elemPath: T[] | undefined = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, idPath, idKey, childrenFieldName, storageType, debug)
         if (!elemPath || elemPath.length === 0) {
             console.warn("no elemPath for idPath, shortKey=" + shortKey + ", idKey=" + idKey + ", idPath=" + JSON.stringify(idPath))
             return false
@@ -219,10 +211,10 @@ export const TreeCache = {
      * @param debug log开关
      * @returns 
      */
-    onDelOneInTree: (
+    onDelOneInTree: <T>(
         shortKey: string,
-        e: any,
-        idPath: any[],
+        e: T,
+        idPath: (string | number)[],
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         storageType: number = UseCacheConfig.defaultStorageType,
@@ -242,7 +234,7 @@ export const TreeCache = {
             return true
         }
 
-        const elemPath = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, idPath, idKey, childrenFieldName, storageType, debug)
+        const elemPath: T[] | undefined = TreeCache.getElementsByPathIdsInTreeFromCache(shortKey, idPath, idKey, childrenFieldName, storageType, debug)
         if (!elemPath || elemPath.length === 0) {
             console.warn("no elemPath for idPath, shortKey=" + shortKey + ", idKey=" + idKey + ", idPath=" + JSON.stringify(idPath))
             return false
