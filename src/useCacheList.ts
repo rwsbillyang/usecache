@@ -155,14 +155,14 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if(wholeUrl)
                     fetchFromRemote(current.isLoadMore, current.pageSize, wholeUrl)//无缓存时从远程加载
                 else
-                    console.log("wholeUrl is not set, setQuery firstly")
+                if (UseCacheConfig.EnableLog)  console.log("wholeUrl is not set, setQuery firstly")
             }
         } else {
             if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
             if(wholeUrl)
                 fetchFromRemote(current.isLoadMore, current.pageSize, wholeUrl)
             else
-                console.log("wholeUrl is not set, setQuery firstly")
+            if (UseCacheConfig.EnableLog)  console.log("wholeUrl is not set, setQuery firstly")
         }
 
     }, [wholeUrl, refreshCount])//变化导致重新加载 

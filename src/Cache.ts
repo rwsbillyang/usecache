@@ -89,6 +89,15 @@ export const Cache = {
         if (UseCacheConfig.EnableLog) console.log("Cache.onAddOne: done, shortKey: " + shortKey)
         return true
     },
+    onAddOneInList: <T>(e: T, arry?: T[]) => {
+        if (arry && arry.length > 0) {
+            arry.unshift(e)
+        } else {
+            return [e]
+        }
+
+        return arry
+    },
 
 
     /**
@@ -125,7 +134,22 @@ export const Cache = {
         return false
     },
 
+    onEditOneInList: <T>(e: T, arry?: T[], idKey: string = UseCacheConfig.defaultIdentiyKey) => {
+        const myKey = idKey || UseCacheConfig.defaultIdentiyKey
+        if (arry && arry.length > 0) {
+            //搜索现有列表，找到后更新
+            for (let i = 0; i < arry.length; i++) {
+                if (arry[i][myKey] === e[myKey]) {
+                    if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne, e[${myKey}]=${e[myKey]}`)
+                    arry[i] = e
 
+                    return true;
+                }
+            }
+          
+        }
+        return false
+    },
 
 
     /**
@@ -171,7 +195,23 @@ export const Cache = {
         return false
     },
 
-
+    onEditManyInList: <T>(list: T[], arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        let flag = false
+        if (arry && arry.length > 0) {
+            for (let j = 0; j < list.length; j++) {
+                const e = list[j]
+                //搜索现有列表，找到后更新
+                for (let i = 0; i < arry.length; i++) {
+                    if (arry[i][myKey] === e[myKey]) {
+                        arry[i] = e
+                        flag = true
+                    }
+                }
+            }
+        }
+        return flag
+    },
     /**
      * call it when delete one successfully
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
@@ -202,7 +242,21 @@ export const Cache = {
         }
         return false
     },
+    onDelOneByIdInList: <T>(id?: string | number, arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
 
+        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        if (arry && arry.length > 0) {
+            //搜索现有列表，找到后删除
+            for (let i = 0; i < arry.length; i++) {
+                if (arry[i][myKey] === id) {
+                    arry.splice(i, 1)
+            
+                    return true;
+                }
+            }
+        }
+        return false
+    },
 
     /**
      * call it when delete one successfully
@@ -221,6 +275,16 @@ export const Cache = {
         if (id) {
             if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOne: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
             return Cache.onDelOneById(shortKey, id, key, storageType)
+        } else {
+            console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
+        }
+        return false
+    },
+    onDelOneInList: <T>(e: T, arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
+        const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const id = e[myKey]?.toString()
+        if (id) {
+            return Cache.onDelOneByIdInList(id, arry, key)
         } else {
             console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
         }
@@ -265,6 +329,25 @@ export const Cache = {
         }
         return false
     },
+    onDelManyByIdsInList: <T>(ids?: (string | number)[], arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
+        if (!ids) return false
+        const myKey = key || UseCacheConfig.defaultIdentiyKey
+        let flag = false
+        if (arry && arry.length > 0) {
+            //搜索现有列表，找到后删除
+            for (let i = 0; i < arry.length; i++) {
+                for (let j = 0; j < ids.length; j++) {
+                    const value = ids[j]
+                    if (arry[i][myKey] === value) {
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${myKey}=${value}`)
+                        arry.splice(i, 1)
+                        flag = true
+                    }
+                }
+            }
+        }
+        return flag
+    },
     /**
      * call it when batch delete manys successfully
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
@@ -283,6 +366,17 @@ export const Cache = {
             return Cache.onDelManyByIds(shortKey, ids, key, storageType)
         } else {
             if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
+        }
+        return false
+    },
+    onDelManyInList: <T>(toDelList: T[], arry?: T[],key: string = UseCacheConfig.defaultIdentiyKey) => {
+        
+        const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const ids = toDelList.map(e => e[myKey]?.toString()).filter(e => !!e)
+        if (ids && ids.length > 0) {
+            return Cache.onDelManyByIdsInList(ids,arry, key)
+        } else {
+            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(toDelList))
         }
         return false
     },
