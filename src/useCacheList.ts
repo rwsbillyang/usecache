@@ -5,6 +5,7 @@ import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./Config";
 import { BasePageQuery } from "./QueryPagination";
 import { query2Params } from "./utils";
+import { DataBox } from "./DataBox";
 
 
 
@@ -31,7 +32,8 @@ export function useCacheList<T, Q extends BasePageQuery>(
     shortKey?: string,
     initalQuery?: Q,
     needLoadMore: boolean = true, //是否需要加载更多按钮，分页数据为true，全部数据为false
-    storageType: number = UseCacheConfig.defaultStorageType
+    storageType: number = UseCacheConfig.defaultStorageType,
+    transformDataBoxFromResponseJson?: (json: any) => DataBox<T[]>
 ) {
     //下面保存页面渲染时需用到的数据，任何更改，将导致页面重新渲染
     const [list, setList] = useState<T[]>([]);
@@ -135,7 +137,8 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
 
                 if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", errMsg)
-            }
+            },
+            transformDataBoxFromResponseJson: transformDataBoxFromResponseJson
         })
    
 

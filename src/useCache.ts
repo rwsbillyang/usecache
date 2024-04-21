@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { cachedFetch } from "./cachedFetch"
 import { UseCacheConfig } from "./Config"
+import { DataBox } from "./DataBox"
 
 
 /**
@@ -15,7 +16,8 @@ import { UseCacheConfig } from "./Config"
 export function useCache<T>(url: string, shortKey?: string,
     withouAuth: boolean = false,
     showLoading: boolean = false,
-    storageType: number = UseCacheConfig.defaultStorageType) {
+    storageType: number = UseCacheConfig.defaultStorageType,
+    transformDataBoxFromResponseJson?: (json: any) => DataBox<T>) {
     const [loading, setLoading] = useState(false)
     const [entity, setEntity] = useState<T>()
     const [errMsg, setErrMsg] = useState<string>()
@@ -43,7 +45,8 @@ export function useCache<T>(url: string, shortKey?: string,
                 setErrMsg(code + ": " +msg)
             },
             "showLoading": showLoading ? UseCacheConfig.showLoading : undefined,
-            "hideLoading": showLoading ? UseCacheConfig?.hideLoading : undefined
+            "hideLoading": showLoading ? UseCacheConfig?.hideLoading : undefined,
+            transformDataBoxFromResponseJson: transformDataBoxFromResponseJson
         })
     }, [url])
 

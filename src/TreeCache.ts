@@ -34,7 +34,7 @@ export const TreeCache = {
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let array: T[] = JSON.parse(str)
-            return ArrayUtil.getArrayByPathInTree(array, posPath, idKey, childrenFieldName)
+            return ArrayUtil.getArrayByPathInTree(array, posPath, idKey, childrenFieldName, debug)
         } else {
             if (debug) console.log("no key=" + shortKey)
         }
@@ -55,7 +55,7 @@ export const TreeCache = {
             return undefined
         }
 
-        return ArrayUtil.getArrayByPathInTree(array, posPath, idKey, childrenFieldName)
+        return ArrayUtil.getArrayByPathInTree(array, posPath, idKey, childrenFieldName, debug)
     },
 
 
@@ -133,7 +133,7 @@ export const TreeCache = {
      * @param debug 
      * @returns 
      */
-    onAddOneInTree: <T>(
+    onAddOneInTreeCache: <T>(
         shortKey: string,
         e: T,
         parentPosPath: (string | number)[],
@@ -185,7 +185,7 @@ export const TreeCache = {
      * @param debug 
      * @returns 
      */
-    onAddOneInTreeList: <T>(
+    onAddOneInTree: <T>(
         e: T,
         parentPosPath: (string | number)[],
         updateRelation: (parent: T, e: T, parents: T[]) => void,
@@ -430,7 +430,6 @@ export const TreeCache = {
         treeArray?: T[],
         idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
-
         debug: boolean = UseCacheConfig.EnableLog
     ) => {
    

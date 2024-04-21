@@ -381,7 +381,7 @@ export const Cache = {
         return false
     },
     /**
-     * evict the key cache with storageType
+     * evict given key cache with storageType
      * @param shortKey 
      * @param storageType 
      */
