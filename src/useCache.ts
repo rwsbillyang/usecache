@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "preact/hooks"
 import { cachedFetch } from "./cachedFetch"
 import { UseCacheConfig } from "./Config"
 import { DataBox } from "./DataBox"

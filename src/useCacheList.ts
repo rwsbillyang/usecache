@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { cachedFetch } from "./cachedFetch";
 
 import { CacheStorage } from "./CacheStorage";

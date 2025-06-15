@@ -88,6 +88,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
         const v = CacheStorage.getObject(params.shortKey, storageType)
         if (v) {
             if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + params.shortKey)
+            if (params.onDone) params.onDone()
             params.onOK(v)
             return true
         } else {
@@ -174,7 +175,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
                 }
                 params.onOK(data)
             }
-            return false
+            //return false
         } else {
             if (params.onKO) {
                 if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
@@ -182,7 +183,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
             } else {
                 console.log("cachedFetch: no onKO handler")
             }
-            return false;
+            //return false;
         }
     }).catch(err => {
         if (isShowLoading && params.hideLoading) {
@@ -193,10 +194,10 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
         if (params.onErr) params.onErr(err.message)
         else {
             console.warn("cachedFetch: no onErr handler, but has err: " + err.message + ", throw it")
-            throw new Error(err.message);
+            //throw new Error(err.message);
         }
 
-        return false;
+        //return false;
     })
 
     return false
