@@ -93,12 +93,14 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>){
         params.storageType, params.transformDataBoxFromResponseJson, params.transfomFromBizData, 
         params.attachAuthHeader, params.isShowLoading, params.showLoading, params.hideLoading)
         .then(d=>{
+            if(params.onDone)params.onDone()
             if(!d){
                 if(params.onNoData)params.onNoData()
             }else{
                 params.onOK(d)
             }
         }).catch(reason => {
+            if(params.onDone)params.onDone()
             if(reason.status === undefined){
                 if(params.onKO)params.onKO(reason.code, reason.msg)
             }else{
@@ -334,7 +336,7 @@ export const cachedFetchPromise = async <T>(
             if (hide) hide()
         }
         //if(params.onDone) params.onDone()
-        if (response.status < 300 && response.ok) {
+        if (response.status < 400 && response.ok) {
             return response.json()
         } else {
             const msg = response.statusText
