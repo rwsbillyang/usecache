@@ -1,6 +1,6 @@
 {
   "name": "@rwsbillyang/preact-usecache",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "preact hooks use cache before client fetch data from remote server, likes cache in server side before database I/O",
   "repository": {
     "type": "git",

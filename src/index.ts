@@ -8,14 +8,14 @@ import { encodeUmi, BasePageQuery, QueryPagination } from "./QueryPagination";
 import { useCache } from "./useCache";
 import { useCacheList } from "./useCacheList";
 import { currentHref,  deepCopy,  query2Params, serializeObject } from "./utils";
-import { cachedFetch, cachedFetchPromise, cachedGet, cachedPost, defaultFetchParams, FetchParams } from "./cachedFetch";
+import { cachedFetch, cachedFetchPromise, cachedGet, cachedPost, defaultFetchParams, FecthErrResson, FetchParams } from "./cachedFetch";
 import { BaseRecord, MongoRecord, SqlRecord } from "./Record";
 import { TreeCache } from "./TreeCache";
 import { ArrayUtil } from "./ArrayUtil";
 import { DateTimeUtil } from "./DateTimeUtil";
 
 
-export type { DataBox, DataBoxBase, DataBoxTableList, BasePageQuery, QueryPagination, FetchParams, BaseRecord, MongoRecord, SqlRecord};
+export type { DataBox, DataBoxBase, DataBoxTableList, BasePageQuery, QueryPagination, FetchParams, FecthErrResson, BaseRecord, MongoRecord, SqlRecord};
 
 //aim: app can import any one from "@rwsbillyang/usecache"
 export {

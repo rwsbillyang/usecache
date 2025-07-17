@@ -4,6 +4,11 @@ import { UseCacheConfig } from "./Config";
 import { CODE, DataBox, getDataFromBox } from "./DataBox";
 import { query2Params } from "./utils";
 
+export interface FecthErrResson{
+    msg?: string
+    code?: string
+    status?: number
+}
 /**
  * load data from remote server or local cache depends on shortKey
  * 
@@ -33,12 +38,13 @@ export interface FetchParams<T> {
     onOK: (data: T) => void,
     onNoData?: () => void,
     onKO?: (code: string, msg?: string) => void,
-    onErr?: (msg: string) => void,
+    onErr?: (msg: string, httpResponseStatus?: number) => void,
     onDone?: () => void,
     isShowLoading?: boolean,
     showLoading?: () => void,
     hideLoading?: () => void,
-    transformDataBoxFromResponseJson?: (json: any) => DataBox<T>
+    transformDataBoxFromResponseJson?: (json: any) => DataBox<T>,
+    transfomFromBizData?: (bizData: any) => T
 }
 
 export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data?: object, shortKey?: string, isShowLoading: boolean = true, attachAuthHeader: boolean = true): FetchParams<T> {
@@ -56,9 +62,9 @@ export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data
             if (UseCacheConfig.EnableLog) console.log("defaultFetchParams: onKO from remote server: code=" + code + ", msg=" + msg)
             if (UseCacheConfig.showToast) UseCacheConfig.showToast(code + ":" + msg)
         },
-        onErr: (errMsg) => {
-            if (UseCacheConfig.EnableLog) console.log("defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
-            if (UseCacheConfig.showToast) UseCacheConfig.showToast(errMsg)
+        onErr: (errMsg, httpResponseStatus?: number) => {
+            if (UseCacheConfig.EnableLog) console.log("httpResponseStatus=" +  httpResponseStatus + ", defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast("httpResponseStatus=" +  httpResponseStatus + +": "+ errMsg)
         }
     }
     return p
@@ -82,126 +88,148 @@ export function cachedPost<T>(url: string, onOK: (data: T) => void, data?: objec
  * 若提供了showLoading/hideLoading 并打开开关，将支持loading的显示隐藏
  * 回调类型包括：数据正常、没有数据、业务错误、请求异常等的回调
  */
-export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
-    const storageType = params.storageType === undefined ? UseCacheConfig.defaultStorageType : params.storageType
-    if (params.shortKey) {
-        const v = CacheStorage.getObject(params.shortKey, storageType)
-        if (v) {
-            if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + params.shortKey)
-            if (params.onDone) params.onDone()
-            params.onOK(v)
-            return true
-        } else {
-            if (UseCacheConfig.EnableLog) console.log("cachedFetch: not found value from cache, shortKey=" + params.shortKey)
-        }
-    }
-
-    let url = params.url
-    let requestInit: RequestInit
-    const authHeader = params.attachAuthHeader === false ? undefined : UseCacheConfig.authheaders()
-    switch (params.method) {
-        case "GET":
-        case "DELETE":
-            {
-                url = params.url + query2Params(params.data)
-                requestInit = {
-                    method: params.method,
-                    headers: new Headers({
-                        ...authHeader,
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                    })
-                }
-
-                break
+export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>){
+    cachedFetchPromise(params.url, params.method, params.data, params.shortKey, 
+        params.storageType, params.transformDataBoxFromResponseJson, params.transfomFromBizData, 
+        params.attachAuthHeader, params.isShowLoading, params.showLoading, params.hideLoading)
+        .then(d=>{
+            if(!d){
+                if(params.onNoData)params.onNoData()
+            }else{
+                params.onOK(d)
             }
-        case "POST":
-        case "PUT": {
-            url = params.url
-            requestInit = {
-                method: params.method,
-                body: params.data ? JSON.stringify(params.data) : undefined,
-                headers: new Headers({
-                    ...authHeader,
-                    'Content-Type': 'application/json; charset=UTF-8'
-                })
+        }).catch(reason => {
+            if(reason.status === undefined){
+                if(params.onKO)params.onKO(reason.code, reason.msg)
+            }else{
+                if(params.onErr)params.onErr(reason.msg, reason.status)
             }
-            break
-        }
-
-        default: {
-            console.warn("please use fetch API directly")
-            return false
-        }
-    }
-
-    //default is true
-    const isShowLoading = params.isShowLoading === false ? false : true
-    if (isShowLoading) {
-        const showLoading = params.showLoading || UseCacheConfig.showLoading
-        if (showLoading) showLoading()
-    }
-
-    if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
-
-    ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
-    //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
-    fetch(url, requestInit).then(response => {
-        if (isShowLoading && params.hideLoading) {
-            const hide = params.hideLoading || UseCacheConfig.hideLoading
-            if (hide) hide()
-        }
-        if (params.onDone) params.onDone()
-        if (response.ok) {
-            return response.json()
-        } else {
-            const msg = response.status + ": " + response.statusText
-            console.warn("cachedFetch: " + msg)
-            throw new Error(msg);
-        }
-    }).then(json => {
-        const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson ? params.transformDataBoxFromResponseJson(json) : json
-        if (box.code === CODE.OK) {
-            const data = getDataFromBox(box)
-            if (data === undefined) { //if(0)返回false if(data)判断有问题
-                if (params.onNoData) {
-                    if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
-                    params.onNoData()
-                } else {
-                    console.log("cachedFetch: no onNoData handler")
-                }
-            } else {
-                if (params.shortKey) {
-                    CacheStorage.saveItem(params.shortKey, JSON.stringify(data), storageType)
-                }
-                params.onOK(data)
-            }
-            //return false
-        } else {
-            if (params.onKO) {
-                if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
-                params.onKO(box.code, box.msg)
-            } else {
-                console.log("cachedFetch: no onKO handler")
-            }
-            //return false;
-        }
-    }).catch(err => {
-        if (isShowLoading && params.hideLoading) {
-            const hide = params.hideLoading || UseCacheConfig.hideLoading
-            if (hide) hide()
-        }
-        if (UseCacheConfig.EnableLog) console.log("cachedFetch exception from remote server:", err)
-        if (params.onErr) params.onErr(err.message)
-        else {
-            console.warn("cachedFetch: no onErr handler, but has err: " + err.message + ", throw it")
-            //throw new Error(err.message);
-        }
-
-        //return false;
-    })
-
-    return false
+        })
 }
+
+
+// export function cachedFetch2<DATATYPE>(params: FetchParams<DATATYPE>) {
+//     const storageType = params.storageType === undefined ? UseCacheConfig.defaultStorageType : params.storageType
+//     if (params.shortKey) {
+//         const v = CacheStorage.getObject(params.shortKey, storageType)
+//         if (v) {
+//             if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + params.shortKey)
+//             if (params.onDone) params.onDone()
+//             params.onOK(v)
+//             return true
+//         } else {
+//             if (UseCacheConfig.EnableLog) console.log("cachedFetch: not found value from cache, shortKey=" + params.shortKey)
+//         }
+//     }
+
+//     let url = params.url
+//     let requestInit: RequestInit
+//     const authHeader = params.attachAuthHeader === false ? undefined : UseCacheConfig.authheaders()
+//     switch (params.method) {
+//         case "GET":
+//         case "DELETE":
+//             {
+//                 url = params.url + query2Params(params.data)
+//                 requestInit = {
+//                     method: params.method,
+//                     headers: new Headers({
+//                         ...authHeader,
+//                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+//                     })
+//                 }
+
+//                 break
+//             }
+//         case "POST":
+//         case "PUT": {
+//             url = params.url
+//             requestInit = {
+//                 method: params.method,
+//                 body: params.data ? JSON.stringify(params.data) : undefined,
+//                 headers: new Headers({
+//                     ...authHeader,
+//                     'Content-Type': 'application/json; charset=UTF-8'
+//                 })
+//             }
+//             break
+//         }
+
+//         default: {
+//             console.warn("please use fetch API directly")
+//             return false
+//         }
+//     }
+
+//     //default is true
+//     const isShowLoading = params.isShowLoading === false ? false : true
+//     if (isShowLoading) {
+//         const showLoading = params.showLoading || UseCacheConfig.showLoading
+//         if (showLoading) showLoading()
+//     }
+
+//     if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
+
+//     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
+//     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
+//     fetch(url, requestInit).then(response => {
+//         if (isShowLoading && params.hideLoading) {
+//             const hide = params.hideLoading || UseCacheConfig.hideLoading
+//             if (hide) hide()
+//         }
+//         if (params.onDone) params.onDone()
+//         if (response.ok) {
+//             return response.json()
+//         } else {
+//             const msg = response.statusText
+//             console.warn("cachedFetch response.status:" + response.status+ ", "+ msg)
+//             if (params.onErr) params.onErr(msg, response.status)
+//             return new Promise((resolve: (data: any) => void, reject: (reason: FecthErrResson) => void) => reject({status: response.status, msg: msg}));
+//             //throw new Error(msg);
+//         }
+//     }).then(json => {
+//         if(!json) return;
+//         const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson ? params.transformDataBoxFromResponseJson(json) : json
+//         if (box.code === CODE.OK) {
+//             const data = getDataFromBox(box)
+//             if (data === undefined) { //if(0)返回false if(data)判断有问题
+//                 if (params.onNoData) {
+//                     if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
+//                     params.onNoData()
+//                 } else {
+//                     console.log("cachedFetch: no onNoData handler")
+//                 }
+//             } else {
+//                 if (params.shortKey) {
+//                     CacheStorage.saveItem(params.shortKey, JSON.stringify(data), storageType)
+//                 }
+//                 params.onOK(data)
+//             }
+//             //return false
+//         } else {
+//             if (params.onKO) {
+//                 if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
+//                 params.onKO(box.code, box.msg)
+//             } else {
+//                 console.log("cachedFetch: no onKO handler")
+//             }
+//             //return false;
+//         }
+//     }).catch(reason => {
+//         if (isShowLoading && params.hideLoading) {
+//             const hide = params.hideLoading || UseCacheConfig.hideLoading
+//             if (hide) hide()
+//         }
+//         if (params.onErr) params.onErr(reason.msg, reason.status)
+//         else {
+//             console.warn("cachedFetch: no onErr handler, but has err: " + reason.msg + ", status:"+reason.status)
+//             //throw new Error(err.message);
+//         }
+
+//         //return false;
+//     })
+
+//     return false
+// }
 
 
 /**
@@ -246,7 +274,7 @@ export const cachedFetchPromise = async <T>(
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: got value from cache, shortKey=" + shortKey)
             //params.onOK(v)
             const d = transfomFromBizData ? transfomFromBizData(v) : v
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => resolve(d))
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => resolve(d))
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: not found value from cache, shortKey=" + shortKey)
         }
@@ -309,14 +337,16 @@ export const cachedFetchPromise = async <T>(
         if (response.status < 300 && response.ok) {
             return response.json()
         } else {
-            const msg = response.status + ": " + response.statusText
-            console.warn("cachedFetchPromise: " + msg)
-            throw new Error(msg);
+            const msg = response.statusText
+            console.warn("cachedFetchPromise response.status:" + response.status+ ", "+ msg )
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({status: response.status, msg: msg}));
+            //if (params.onErr) params.onErr(msg, response.status)
         }
     }).then(json => {
         const box: DataBox<any> = transformDataBoxFromResponseJson ? transformDataBoxFromResponseJson(json) : json
         if (box.code === CODE.OK) {
-            const data = box.data
+            //const data = box.data
+            const data = getDataFromBox(box)
             if (data === undefined) { //if(0)返回false if(data)判断有问题
                 if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: no data from remote server")
             } else {
@@ -329,17 +359,18 @@ export const cachedFetchPromise = async <T>(
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + box.code + ",msg=" + box.msg)
 
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => reject("code=" + box.code + ", msg=" + box.msg));
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({msg: box.msg, status: 200, code: box.code}));
         }
-    }).catch(err => {
-        if (UseCacheConfig.EnableLog)
-            console.log("cachedFetchPromise exception from remote server:" + err)
-        else {
-            console.warn("cachedFetchPromise: no onErr handler, but has err: " + err)
-        }
-        throw Error(err)
-        // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
     })
+    // .catch(reason => {
+    //     if (UseCacheConfig.EnableLog)
+    //         console.log("cachedFetchPromise exception from remote server:" + err)
+    //     else {
+    //         console.warn("cachedFetchPromise: no onErr handler, but has err: " + err)
+    //     }
+    //     throw Error(err)
+    //     // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
+    // })
 
     return p
 }
