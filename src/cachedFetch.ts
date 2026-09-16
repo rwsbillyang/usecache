@@ -1,10 +1,10 @@
 
 import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./Config";
-import { CODE, DataBox, getDataFromBox } from "./DataBox";
+import { CODE, type DataBox, getDataFromBox } from "./DataBox";
 import { query2Params } from "./utils";
 
-export interface FecthErrResson{
+export interface FecthErrResson {
     msg?: string
     code?: string
     status?: number
@@ -63,8 +63,8 @@ export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data
             if (UseCacheConfig.showToast) UseCacheConfig.showToast(code + ":" + msg)
         },
         onErr: (errMsg, httpResponseStatus?: number) => {
-            if (UseCacheConfig.EnableLog) console.log("httpResponseStatus=" +  httpResponseStatus + ", defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
-            if (UseCacheConfig.showToast) UseCacheConfig.showToast("httpResponseStatus=" +  httpResponseStatus + +": "+ errMsg)
+            if (UseCacheConfig.EnableLog) console.log("httpResponseStatus=" + httpResponseStatus + ", defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast("httpResponseStatus=" + httpResponseStatus + +": " + errMsg)
         }
     }
     return p
@@ -89,23 +89,23 @@ export function cachedPost<T>(url: string, onOK: (data: T) => void, data?: objec
  * 回调类型包括：数据正常、没有数据、业务错误、请求异常等的回调
  */
 export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
-    cachedFetchPromise(params.url, params.method, params.data, params.shortKey, 
-        params.storageType, params.transformDataBoxFromResponseJson, params.transfomFromBizData, 
+    cachedFetchPromise(params.url, params.method, params.data, params.shortKey,
+        params.storageType, params.transformDataBoxFromResponseJson, params.transfomFromBizData,
         params.attachAuthHeader, params.isShowLoading, params.showLoading, params.hideLoading)
-        .then(d=>{
-            if(params.onDone)params.onDone()
-            if(!d){
-                if(params.onNoData)params.onNoData()
-        } else {
+        .then(d => {
+            if (params.onDone) params.onDone()
+            if (!d) {
+                if (params.onNoData) params.onNoData()
+            } else {
                 params.onOK(d)
-        }
+            }
         }).catch(reason => {
-            if(params.onDone)params.onDone()
-            if(reason.status === undefined){
-                if(params.onKO)params.onKO(reason.code, reason.msg)
-            }else{
-                if(params.onErr)params.onErr(reason.msg, reason.status)
-    }
+            if (params.onDone) params.onDone()
+            if (reason.status === undefined) {
+                if (params.onKO) params.onKO(reason.code, reason.msg)
+            } else {
+                if (params.onErr) params.onErr(reason.msg, reason.status)
+            }
         })
 }
 
@@ -336,12 +336,12 @@ export const cachedFetchPromise = async <T>(
             if (hide) hide()
         }
         //if(params.onDone) params.onDone()
-        if (response.status < 300 && response.ok) {
+        if (response.status < 400 && response.ok) {
             return response.json()
         } else {
             const msg = response.statusText
-            console.warn("cachedFetchPromise response.status:" + response.status+ ", "+ msg )
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({status: response.status, msg: msg}));
+            console.warn("cachedFetchPromise response.status:" + response.status + ", " + msg)
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({ status: response.status, msg: msg }));
             //if (params.onErr) params.onErr(msg, response.status)
         }
     }).then(json => {
@@ -361,7 +361,7 @@ export const cachedFetchPromise = async <T>(
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + box.code + ",msg=" + box.msg)
 
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({msg: box.msg, status: 200, code: box.code}));
+            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({ msg: box.msg, status: 200, code: box.code }));
         }
     })
     // .catch(reason => {

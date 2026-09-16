@@ -1,6 +1,6 @@
 import { ArrayUtil } from "./ArrayUtil";
 import { UseCacheConfig } from "./Config";
-import { BasePageQuery, encodeUmi } from "./QueryPagination";
+import { type BasePageQuery, encodeUmi } from "./QueryPagination";
 
 /**
  * @return protocol + "//"+ host, eg: https://www.example.com
@@ -8,6 +8,30 @@ import { BasePageQuery, encodeUmi } from "./QueryPagination";
 export const currentHref = () => window.location.protocol + "//" + window.location.host // window.location.protocol: https:
 
 
+/**
+ * @return the value of key in the specified object obj, or undefined if no
+ * @param obj the specified object
+ * @param key the specified key in the specified object obj
+ */
+export function getValueByKey<T extends object>(obj: T, key: string): unknown {
+    for (const [k, v] of Object.entries(obj)) {
+        if (k === key) {
+            return v ?? undefined //v 是 null/undefined → 返回 undefined；否则返回 v 本身。 ?? 比 || 更精确——它不会把 0、false、空字符串这些"合法值"误当成空。
+        }
+    }
+    return undefined
+}
+
+/**
+ * set value for key in the specified object obj
+ * @param obj the specified object
+ * @param key the specified key in the specified object obj
+ * @param value the vaule of the specified key 
+ */
+export function setValueByKey<T extends object>(obj: T, key: string, value: unknown) {
+    const record = obj as Record<string, unknown>
+    record[key] = value
+}
 
 /**
  * 将对象obj转换成 key1=value1&key2=value2形式的字符串，会对key值进行排序;
@@ -19,13 +43,17 @@ export const serializeObject = (obj?: object, enableEmptyLog: boolean = false) =
     if(!obj) return undefined
     
     const tempArray: string[] = [];
-    for (const item in obj) {
+    const record = obj as Record<string, unknown>;
+    for (const item in record) {
         if (item) {
-            const value = obj[item]
+            const value = record[item]
             if (value === null || value === undefined || value === "") {
                 if (enableEmptyLog) console.log(`serializeObject: no value for ${item}, ignore`)
             } else {
-                tempArray.push(`${item}=${value}`)
+               //只是要 query string 的话，new URLSearchParams(obj as Record<string, string>).toString() 更省事，
+               //但它不会自动丢空值，也不排序
+                //tempArray.push(`${item}=${value}`)
+                tempArray.push(`${encodeURIComponent(item)}=${encodeURIComponent(String(value))}`)
             }
         }
     }
@@ -49,7 +77,6 @@ export function query2Params<Q extends BasePageQuery>(query?: Q) {
 
     if (UseCacheConfig.EnableLog)
         console.log("query2Params: newQuery=" + JSON.stringify(query))
-
 
     const str = serializeObject(newQuery)
     if (str) {
@@ -75,10 +102,11 @@ export function deepCopy(data: object, ignoreDeepKeys?: string[], hash = new Wea
         return hash.get(data)
     }
 
-    let newData = {};
+    let newData: Record<string, unknown>={};
     const dataKeys = Object.keys(data);
+    const record = data as Record<string, unknown>;
     dataKeys.forEach(key => {
-        const currentDataValue = data[key];
+        const currentDataValue = record[key];
         // 基本数据类型的值和函数直接赋值拷贝 或者是忽略的键
         if (typeof currentDataValue !== "object" || currentDataValue === null || ArrayUtil.contains(ignoreDeepKeys, key)) {
             newData[key] = currentDataValue;

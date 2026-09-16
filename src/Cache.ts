@@ -4,6 +4,23 @@ import { CacheStorage } from "./CacheStorage"
 
 export const Cache = {
 
+    parseArrayStr: <T extends object>(jsonStr: string)=>{
+        try {
+            const arry = JSON.parse(jsonStr)
+            if (!Array.isArray(arry)) {
+                console.error(`Not array: ${jsonStr} `)
+                return undefined
+            }else{
+                return arry as T[]
+            }
+            
+        } catch {
+            console.error(`JSON.parse exception: ${jsonStr} `)
+            return undefined
+        }
+    },
+
+
     /**
      * find one from cache
      * @param shortKey 
@@ -12,7 +29,7 @@ export const Cache = {
      * @param storageType default configed in UseCacheConfig.defaultStorageType
      * @returns 
      */
-    findOne: <T>(shortKey: string, id?: string | number, idKey: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    findOne: <T extends object>(shortKey: string, id: string | number, idKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (id === undefined) {
             if (UseCacheConfig.EnableLog) console.log("Cache.findOne: no id")
             return undefined
@@ -20,13 +37,13 @@ export const Cache = {
         if (storageType === StorageType.NONE)
             return undefined
 
-        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
+        //const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
-            let arry: T[] = JSON.parse(str)
+            let arry = Cache.parseArrayStr<T>(str)
             if (arry && arry.length > 0) {
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][myKey] === id) {
+                    if (arry[i][idKey] === id) {
                         if (UseCacheConfig.EnableLog) console.log("Cache.findOne: found, shortKey: " + shortKey)
                         return arry[i]
                     }
@@ -37,19 +54,19 @@ export const Cache = {
     },
 
 
-    findMany: <T>(shortKey: string, ids: (string | number)[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    findMany: <T extends object>(shortKey: string, ids: (string | number)[], idKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return undefined
 
-        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        //const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
-            let arry: T[] = JSON.parse(str)
+            let arry = Cache.parseArrayStr<T>(str)
             if (arry && arry.length > 0) {
                 for (let i = 0; i < arry.length; i++) {
                     const e = arry[i]
                     for (let j = 0; j < ids.length; j++) {
-                        if (e[myKey] === ids[j]) {
+                        if (e[idKey] === ids[j]) {
                             arry.push(e)
                         }
                     }
@@ -104,29 +121,29 @@ export const Cache = {
      * call it when update one successully
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param e entity
-     * @param id find one by which key, default:"_id"
+     * @param idKey find one by which key, default:"_id"
      * @param storageType 
      * @returns return true if update one successfully, or else false
      */
-    onEditOne: <T>(shortKey: string, e: T, idKey: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onEditOne: <T extends object>(shortKey: string, e: T, objectKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = idKey || UseCacheConfig.defaultIdentiyKey
+        //const myKey = idKey || UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
-            let arry: T[] = JSON.parse(str)
+            let arry = Cache.parseArrayStr<T>(str)
             if (arry && arry.length > 0) {
                 //搜索现有列表，找到后更新
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][myKey] === e[myKey]) {
-                        if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne, e[${myKey}]=${e[myKey]}, shortKey: ${shortKey}`)
+                    if (arry[i][objectKey] === e[objectKey]) {
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne, shortKey: ${shortKey}`)
                         arry[i] = e
                         CacheStorage.saveObject(shortKey, arry)
                         return true;
                     }
                 }
-                if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne：not found in list, key=${myKey}, shortKey: ${shortKey}`)
+                if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne：not found in list, shortKey: ${shortKey}`)
             }
         } else {
             if (UseCacheConfig.EnableLog) console.log("Cache.onEditOne：not found list: shortKey: " + shortKey)
@@ -134,19 +151,18 @@ export const Cache = {
         return false
     },
 
-    onEditOneInList: <T>(e: T, arry?: T[], idKey: string = UseCacheConfig.defaultIdentiyKey) => {
-        const myKey = idKey || UseCacheConfig.defaultIdentiyKey
+    onEditOneInList: <T extends object>(e: T,  objectKey: keyof T, arry?: T[]) => {
+        //const myKey = idKey || UseCacheConfig.defaultIdentiyKey
         if (arry && arry.length > 0) {
             //搜索现有列表，找到后更新
             for (let i = 0; i < arry.length; i++) {
-                if (arry[i][myKey] === e[myKey]) {
-                    if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne, e[${myKey}]=${e[myKey]}`)
+                if (arry[i][objectKey] === e[objectKey]) {
+                    if (UseCacheConfig.EnableLog) console.log(`Cache.onEditOne`)
                     arry[i] = e
 
                     return true;
                 }
             }
-          
         }
         return false
     },
@@ -156,15 +172,15 @@ export const Cache = {
      * call it after batch update
      * @param shortKey cachekey = UseCacheConfig.cacheKeyPrefix() + shortKey
      * @param list entity
-     * @param key find one by which key, default:"_id"
+     * @param objectKey find one by which key, default:"_id"
      * @param storageType 
      * @returns update none return false, return true if update any one success 
      */
-    onEditMany: <T>(shortKey: string, list: T[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onEditMany: <T extends object>(shortKey: string, list: T[], objectKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        //const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey, storageType)
         if (str) {
             let flag = false
@@ -174,7 +190,7 @@ export const Cache = {
                     const e = list[j]
                     //搜索现有列表，找到后更新
                     for (let i = 0; i < arry.length; i++) {
-                        if (arry[i][myKey] === e[myKey]) {
+                        if (arry[i][objectKey] === e[objectKey]) {
                             arry[i] = e
                             flag = true
                         }
@@ -195,15 +211,15 @@ export const Cache = {
         return false
     },
 
-    onEditManyInList: <T>(list: T[], arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
-        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+    onEditManyInList: <T extends object>(list: T[], objectKey: keyof T, arry?: T[]) => {
+       // const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         let flag = false
         if (arry && arry.length > 0) {
             for (let j = 0; j < list.length; j++) {
                 const e = list[j]
                 //搜索现有列表，找到后更新
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][myKey] === e[myKey]) {
+                    if (arry[i][objectKey] === e[objectKey]) {
                         arry[i] = e
                         flag = true
                     }
@@ -220,21 +236,21 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelOneById: <T>(shortKey: string, id?: string | number, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelOneById: <T extends object>(shortKey: string, objectKey: keyof T, id?: string | number,  storageType: number = UseCacheConfig.defaultStorageType) => {
         if (id === undefined || storageType === StorageType.NONE)
             return false
 
-        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+        //const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let arry: T[] = JSON.parse(str)
             if (arry && arry.length > 0) {
                 //搜索现有列表，找到后删除
                 for (let i = 0; i < arry.length; i++) {
-                    if (arry[i][myKey] === id) {
+                    if (arry[i][objectKey] === id) {
                         arry.splice(i, 1)
                         CacheStorage.saveItem(shortKey, JSON.stringify(arry))
-                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOneById: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOneById: del done: ${id}, shortKey: ${shortKey}`)
                         return true;
                     }
                 }
@@ -242,13 +258,14 @@ export const Cache = {
         }
         return false
     },
-    onDelOneByIdInList: <T>(id?: string | number, arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
 
-        const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
+    onDelOneByIdInList: <T extends object>(id: string | number, objectKey: keyof T, arry?: T[]) => {
+
+        //const myKey = key ? key : UseCacheConfig.defaultIdentiyKey
         if (arry && arry.length > 0) {
             //搜索现有列表，找到后删除
             for (let i = 0; i < arry.length; i++) {
-                if (arry[i][myKey] === id) {
+                if (arry[i][objectKey] === id) {
                     arry.splice(i, 1)
             
                     return true;
@@ -266,27 +283,27 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelOne: <T>(shortKey: string, e: T, key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelOne: <T extends object>(shortKey: string, e: T, objectKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
-        const id = e[myKey]?.toString()
+        //const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const id = e[objectKey]?.toString()
         if (id) {
-            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOne: del done: ${myKey}=${id}, shortKey: ${shortKey}`)
-            return Cache.onDelOneById(shortKey, id, key, storageType)
+            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelOne: del done: ${id}, shortKey: ${shortKey}`)
+            return Cache.onDelOneById(shortKey, objectKey, id, storageType)
         } else {
-            console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
+            console.log("Cache.onDelOne: not found in entity=" + JSON.stringify(e))
         }
         return false
     },
-    onDelOneInList: <T>(e: T, arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
-        const id = e[myKey]?.toString()
+    onDelOneInList: <T extends object>(e: T, objectKey: keyof T, arry?: T[]) => {
+        //const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const id = e[objectKey]?.toString()
         if (id) {
-            return Cache.onDelOneByIdInList(id, arry, key)
+            return Cache.onDelOneByIdInList(id, objectKey, arry)
         } else {
-            console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity=" + JSON.stringify(e))
+            console.log("Cache.onDelOne: not found id entity=" + JSON.stringify(e))
         }
         return false
     },
@@ -299,11 +316,11 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelManyByIds: <T>(shortKey: string, ids?: (string | number)[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelManyByIds: <T extends object>(shortKey: string, objectKey: keyof T, ids?: (string | number)[], storageType: number = UseCacheConfig.defaultStorageType) => {
         if (!ids || storageType === StorageType.NONE)
             return false
 
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
+        //const myKey = key || UseCacheConfig.defaultIdentiyKey
         const str = CacheStorage.getItem(shortKey)
         if (str) {
             let flag = false
@@ -313,8 +330,8 @@ export const Cache = {
                 for (let i = 0; i < arry.length; i++) {
                     for (let j = 0; j < ids.length; j++) {
                         const value = ids[j]
-                        if (arry[i][myKey] === value) {
-                            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${myKey}=${value}, shortKey: ${shortKey}`)
+                        if (arry[i][objectKey] === value) {
+                            if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${value}, shortKey: ${shortKey}`)
                             arry.splice(i, 1)
                             flag = true
                         }
@@ -329,17 +346,17 @@ export const Cache = {
         }
         return false
     },
-    onDelManyByIdsInList: <T>(ids?: (string | number)[], arry?: T[], key: string = UseCacheConfig.defaultIdentiyKey) => {
+    onDelManyByIdsInList: <T extends object>(objectKey: keyof T, ids?: (string | number)[], arry?: T[]) => {
         if (!ids) return false
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
+        //const myKey = key || UseCacheConfig.defaultIdentiyKey
         let flag = false
         if (arry && arry.length > 0) {
             //搜索现有列表，找到后删除
             for (let i = 0; i < arry.length; i++) {
                 for (let j = 0; j < ids.length; j++) {
                     const value = ids[j]
-                    if (arry[i][myKey] === value) {
-                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${myKey}=${value}`)
+                    if (arry[i][objectKey] === value) {
+                        if (UseCacheConfig.EnableLog) console.log(`Cache.onDelManyByIds: del one: ${value}`)
                         arry.splice(i, 1)
                         flag = true
                     }
@@ -356,27 +373,27 @@ export const Cache = {
      * @param storageType 
      * @returns true if successful
      */
-    onDelMany: <T>(shortKey: string, list: T[], key: string = UseCacheConfig.defaultIdentiyKey, storageType: number = UseCacheConfig.defaultStorageType) => {
+    onDelMany: <T extends object>(shortKey: string, list: T[], objectKey: keyof T, storageType: number = UseCacheConfig.defaultStorageType) => {
         if (storageType === StorageType.NONE)
             return false
 
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
-        const ids = list.map(e => e[myKey]?.toString()).filter(e => !!e)
+        //const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const ids = list.map(e => e[objectKey]?.toString()).filter(e => !!e) as string[]
         if (ids && ids.length > 0) {
-            return Cache.onDelManyByIds(shortKey, ids, key, storageType)
+            return Cache.onDelManyByIds(shortKey, objectKey, ids,  storageType)
         } else {
-            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(list))
+            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id in entity list=" + JSON.stringify(list))
         }
         return false
     },
-    onDelManyInList: <T>(toDelList: T[], arry?: T[],key: string = UseCacheConfig.defaultIdentiyKey) => {
+    onDelManyInList: <T extends object>(toDelList: T[], objectKey: keyof T, arry?: T[]) => {
         
-        const myKey = key || UseCacheConfig.defaultIdentiyKey
-        const ids = toDelList.map(e => e[myKey]?.toString()).filter(e => !!e)
+       // const myKey = key || UseCacheConfig.defaultIdentiyKey
+        const ids = toDelList.map(e => e[objectKey]?.toString()).filter(e => !!e) as string[] || undefined
         if (ids && ids.length > 0) {
-            return Cache.onDelManyByIdsInList(ids,arry, key)
+            return Cache.onDelManyByIdsInList(objectKey, ids, arry)
         } else {
-            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id by key=" + myKey + "in entity list=" + JSON.stringify(toDelList))
+            if (UseCacheConfig.EnableLog) console.log("Cache.onDelOne: not found id in entity list=" + JSON.stringify(toDelList))
         }
         return false
     },

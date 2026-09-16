@@ -1,5 +1,5 @@
 
-import { IRequest, fetchRequest } from "./IRequest";
+import { type IRequest, fetchRequest } from "./IRequest";
 import { StorageType } from "./StorageType";
 
 interface IUseCacheConfig {

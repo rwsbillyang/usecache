@@ -1,7 +1,8 @@
 # usecache
 
 usecache is front-end request cache react hooks.
- 
+Since v2.0.0, usecache is based on react 19 and typescript 6
+
  Requests from front end load data from local cache(sessionStorage or localStorage) firstly.
  If not hit, then load data from remote server and cache them for next time.
 
@@ -11,7 +12,7 @@ usecache is front-end request cache react hooks.
 
 Add dependency:
 ```
-npm i @rwsbillyang/usecache
+pnpm i @rwsbillyang/usecache
 ```
 
 ### useCache hook

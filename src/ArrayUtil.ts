@@ -1,4 +1,5 @@
 import { UseCacheConfig } from "./Config"
+import { getValueByKey, setValueByKey } from "./utils"
 
 /**
  * 数组工具，支持树形数组
@@ -24,17 +25,17 @@ export const ArrayUtil = {
      * @param idKey 
      * @returns 成功返回该项
      */
-    findOne: function <T>(array?: T[], id?: string | number, idKey: string = UseCacheConfig.defaultIdentiyKey) {
+    findOne: function <T extends object>(idKey: keyof T, array?: T[], id?: string | number) {
         if (!array || array.length === 0 || id === undefined) {
             if (UseCacheConfig.EnableLog) console.log("ArrayUtil.findOne: no array or empty, no id")
             return undefined
         }
 
-        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
+        //const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
 
         if (array && array.length > 0) {
             for (let i = 0; i < array.length; i++) {
-                if (array[i][myKey] === id) {
+                if (array[i][idKey] === id) {
                     if (UseCacheConfig.EnableLog) console.log("ArrayUtil.findOne: found one")
                     return array[i]
                 }
@@ -42,6 +43,7 @@ export const ArrayUtil = {
         }
         return undefined
     },
+
     /**
      * 从数组中找多项
      * @param array 
@@ -49,19 +51,19 @@ export const ArrayUtil = {
      * @param idKey 
      * @returns 成功返回数组，要么有值，要么undefined，不返回空数组
      */
-    findMany: function <T>(array?: T[], ids?: (string | number)[], idKey: string = UseCacheConfig.defaultIdentiyKey) {
+    findMany: function <T extends object>(idKey: keyof T, array?: T[], ids?: (string | number)[]) {
         if (!array || array.length === 0 || !ids || ids.length === 0){
             if (UseCacheConfig.EnableLog) console.log("ArrayUtil.findMany: no array or empty, no ids")
             return undefined
         }
 
-        const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
+        //const myKey = idKey ? idKey : UseCacheConfig.defaultIdentiyKey
 
         const ret: T[] = []
         if (array && array.length > 0) {
             for (let i = 0; i < array.length; i++) {
                 for(let j = 0; j < ids.length; j++){
-                    if (array[i][myKey] === ids[j]) {
+                    if (array[i][idKey] === ids[j]) {
                         ret.push(array[i]) 
                     } 
                 } 
@@ -77,7 +79,7 @@ export const ArrayUtil = {
      * @param idKey 
      * @returns 成功返回true
      */
-    removeOne: function <T>(array?: T[],id?: string | number,idKey: string = UseCacheConfig.defaultIdentiyKey) 
+    removeOne: function <T extends object>(idKey: keyof T, array?: T[],id?: string | number) 
     {
         if (!array || array.length === 0 || id === undefined) return false
         for (let i = 0; i < array.length; i++) {
@@ -97,7 +99,7 @@ export const ArrayUtil = {
      * @param storageType 
      * @returns 有一个被删除就返回true
      */
-    removeMany: function <T>(array?: T[],ids?: (string | number)[],idKey: string = UseCacheConfig.defaultIdentiyKey) 
+    removeMany: function <T extends object>(idKey: keyof T, array?: T[],ids?: (string | number)[]) 
     {
         if (!array || array.length === 0 || !ids || ids.length === 0) return false
         var ret = false
@@ -118,16 +120,16 @@ export const ArrayUtil = {
     /**
      * 通过id path，在树形数组中找到各元素，以数组返回 
      * 不保证path长度与返回的数组长度一致
+     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param tree 树形数组
      * @param path 节点id数组，用于定位：根节点id->子节点id
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
      * @param debug 是否打开日志输出 默认值UseCacheConfig.EnableLog
      */
-    getArrayByPathInTree: function <T> (
+    getArrayByPathInTree: function <T extends object>(
+        idKey: keyof T,
         tree?: T[],
         path?: (string | number)[],
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         debug: boolean = UseCacheConfig.EnableLog): T[] | undefined 
     {
@@ -142,16 +144,21 @@ export const ArrayUtil = {
         for (let i = 0; i < path.length; i++) {
             if (array && array.length > 0) {
                 if (debug) console.log("find " + path[i])
-                const e = ArrayUtil.findOne(array, path[i], idKey)
+                const e = ArrayUtil.findOne(idKey,array, path[i])
                 if (e) {
                     ret.push(e)
-                    array = e[childrenFieldName]
+                    const arr = getValueByKey(e, childrenFieldName)//e[childrenFieldName]
+                    if (arr && Array.isArray(arr)) {
+                        array = arr
+                    } else { 
+                        break
+                    }
                     //if (debug) console.log("got one, e:", e)
                 }
             }
         }
         if (debug && ret.length === 0) {
-            console.log("not found elem path idKey="+ idKey+" in tree: ", tree)
+            console.log("not found elem path  in tree: ", tree)
         }
         return ret
     },
@@ -160,20 +167,20 @@ export const ArrayUtil = {
     /**
      * 通过id path，返回根节点，根节点及下面的children只保留搜索路径中的元素，其它的被去除，不影响原tree数据
      * 可用于剪除其它无关枝丫
+     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param tree 树形数组
      * @param path 节点id数组，用于定位：根节点id->子节点id
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
      * @param debug 是否打开日志输出 默认值UseCacheConfig.EnableLog
      */
-    trimTreeByPath: function <T> (
+    trimTreeByPath: function <T extends object>(
+        idKey: keyof T,
         tree?: T[],
         path?: (string | number)[],
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
         childrenFieldName: string = "children",
         debug: boolean = UseCacheConfig.EnableLog): T | undefined 
     {
-        const array = ArrayUtil.getArrayByPathInTree(tree, path, idKey, childrenFieldName, debug)
+        const array = ArrayUtil.getArrayByPathInTree(idKey, tree, path, childrenFieldName, debug)
         if (!array || array.length === 0) {
             if (debug) console.log("not found any one")
             return undefined
@@ -189,8 +196,8 @@ export const ArrayUtil = {
         }
         newArray.push(array[array.length-1])
         
-        for(let i = 0; i < array.length - 1; i++){  
-            newArray[i][childrenFieldName] = [newArray[i+1]] //只保留路径中的，去除了其它兄弟
+        for (let i = 0; i < array.length - 1; i++){  
+            setValueByKey(newArray[i], childrenFieldName, [newArray[i + 1]])//只保留路径中的，去除了其它兄弟
         }
      
         return newArray[0]
@@ -200,17 +207,17 @@ export const ArrayUtil = {
 
     /**
      * 搜索id， 从树形数组tree中，找到第一条命中的数组
+     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param tree 树形数组数组
      * @param id 待查找的元素id
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @returns 返回数组：叶节点排最前，根节点最后
      */
-    findOneFromTree: function <T> (
+    findOneFromTree: function <T extends object>(
+        idKey: keyof T,
         tree?: T[],
         id?: string | number | undefined,
         childrenFieldName: string = "children",
-        idKey: string = UseCacheConfig.defaultIdentiyKey,
         debug: boolean = UseCacheConfig.EnableLog): T[] | undefined 
     {
 
@@ -227,10 +234,10 @@ export const ArrayUtil = {
                 return path //找到一个元素即返回一个数组
             } else {
                 if (debug) console.log("check children, id=" + e[idKey])
-                const children = e[childrenFieldName]
-                if (children) {
+                const children = getValueByKey(e, childrenFieldName)//,e[childrenFieldName]
+                if (children && Array.isArray(children)) {
                     //递归，从数组（孩子）中找到一个即返回一个数组，然后压入父节点，返回压入父节点的数组
-                    const p2: T[] | undefined = ArrayUtil.findOneFromTree(children, id, childrenFieldName, idKey)
+                    const p2: T[] | undefined = ArrayUtil.findOneFromTree(idKey, children, id, childrenFieldName)
                     if (p2) {
                         p2.push(e)
                         if (debug) console.log("got one in child: id=" + e[idKey] + ", return path=", p2)
@@ -249,18 +256,19 @@ export const ArrayUtil = {
      * 搜索id， 从树形数组rootArray中，找到所有命中路径数组, 结果存放在第一个参数resultPaths中
      * @param resultPaths 最后结果保存在该数组中，返回多条路径，每条路径是从根元素到所寻找叶子节点元素的数组
      * @param tree 数组
+     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param id 待查找的元素id
      * @param childrenFieldName 存储父节点id信息的字符串，默认 children
-     * @param idKey 数组 数组中元素进行相等性比较时，用哪个字段，默认id，若元素的id相同，就认为两个元素相同
      * @param tempPath 临时变量，内部实现使用，不要传递
      * @returns 
      */
-    findAllFromTree: function <T>(
+    findAllFromTree: function <T extends object>(
         resultPaths: T[][],
         tree: T[],
+        idKey: keyof T,
         id?: string | number,
         childrenFieldName: string = "children",
-        idKey: string = UseCacheConfig.defaultIdentiyKey, tempPath: T[] = [])
+        tempPath: T[] = [])
     {
         if (!tree || !id) return
 
@@ -272,10 +280,10 @@ export const ArrayUtil = {
             if (e[idKey] === id) { //找到一个， 压入path，不再对其children进行查找          
                 resultPaths.push([...tempPath]) //找到后也没有return返回，而是继续该循环查找其它兄弟节点
             } else {//没有相等，则是查找子节点
-                const children = e[childrenFieldName]
-                if (children) {
+                const children = getValueByKey(e, childrenFieldName)  //e[childrenFieldName]
+                if (children && Array.isArray(children)) {
                     //递归，在孩子数组中相同的查找，并将path传递进来，一遍记录path节点
-                    ArrayUtil.findAllFromTree(resultPaths, children, id, childrenFieldName, idKey, tempPath)
+                    ArrayUtil.findAllFromTree(resultPaths, children, idKey, id, childrenFieldName, tempPath)
                 }
             }
 
@@ -291,13 +299,15 @@ export const ArrayUtil = {
      * @param args 
      * @returns 
      */
-    transformTree: function <T, R> (treeData: T[], transform: (e: T, args?: any) => R, childrenName = "children", args?: any){
+    transformTree: function <T extends object, R extends object> (treeData: T[], transform: (e: T, args?: any) => R, childrenName = "children", args?: any){
         const list: R[] = []
         if(treeData.length === 0) return list
         treeData.forEach((e) => {
             const r = transform(e, args)
-            const children = e[childrenName]
-            if(children) r[childrenName] = ArrayUtil.transformTree(children, transform, childrenName, args)
+            const children = getValueByKey(e, childrenName)//e[childrenName]
+            if (children && Array.isArray(children)) { 
+                setValueByKey(r, childrenName, ArrayUtil.transformTree(children, transform, childrenName, args))
+            } else { console.warn("not array, ignore transform") }
             list.push(r)
         })
         return list
@@ -311,12 +321,14 @@ export const ArrayUtil = {
      * @param args 
      * @returns 
      */
-    traverseTree: function <T> (treeData: T[], doSth: (e: T, args?: any) => void, childrenName = "children", args?: any){
+    traverseTree: function <T extends object> (treeData: T[], doSth: (e: T, args?: any) => void, childrenName = "children", args?: any){
         if(treeData.length === 0) return 
         treeData.forEach((e) => {
             doSth(e, args)
-            const children = e[childrenName]
-            if(children)  ArrayUtil.traverseTree(children, doSth, childrenName, args)
+            const children = getValueByKey(e, childrenName)//e[childrenName]
+            if (children && Array.isArray(children)) {
+                ArrayUtil.traverseTree(children, doSth, childrenName, args)
+            } else { console.warn("not array, ignore traverse")}
         })
     }
 }

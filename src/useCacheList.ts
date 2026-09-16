@@ -3,9 +3,9 @@ import { cachedFetch } from "./cachedFetch";
 
 import { CacheStorage } from "./CacheStorage";
 import { UseCacheConfig } from "./Config";
-import { BasePageQuery } from "./QueryPagination";
+import { type BasePageQuery } from "./QueryPagination";
 import { query2Params } from "./utils";
-import { DataBox } from "./DataBox";
+import { type DataBox } from "./DataBox";
 
 
 

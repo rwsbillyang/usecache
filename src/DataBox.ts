@@ -2,12 +2,20 @@
 /**
  * code definition in payload from server
  */
-export enum CODE {
-    OK = "OK",
-    KO = "KO",
-    NewUser = 'NewUser',
-    TokenExpired = "TokenExpired"
-}
+// export const enum CODE {
+//     OK = "OK",
+//     KO = "KO",
+//     NewUser = 'NewUser',
+//     TokenExpired = "TokenExpired"
+// }
+export const CODE = {
+    OK: "OK",
+    KO: "KO",
+    NewUser: "NewUser",
+    TokenExpired: "TokenExpired"
+} as const
+
+export type CODE = typeof CODE[keyof typeof CODE]
 
 /**
  * response from remote server
