@@ -34,32 +34,32 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
-    "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2",
-    "@microsoft/api-extractor": "^7",
-    "unplugin-dts": "^1"
+    "unplugin-dts": "^1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vite": "^7.1.5",
+    "@microsoft/api-extractor": "^7"
   },
   "sideEffects": [
-    "dist/index.css"
+    "dist/**/*.css"
   ],
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/esm/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/esm/index.d.ts",
   "typings": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/index.js"
-    }
-  },
   "files": [
     "dist",
     "package.json",
-    "README.md",
-    "global.d.ts"
-  ]
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/index.cjs"
+    }
+  }
 
 }

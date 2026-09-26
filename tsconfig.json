@@ -28,10 +28,24 @@
     "importHelpers": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react"
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationDir": "dist/esm",
+    "outDir": "dist",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
   },
   "include": [
-    "src"
+    "./src/**/*",
+    "typings/**/*",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }
 
