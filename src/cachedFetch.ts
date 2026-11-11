@@ -64,7 +64,7 @@ export function defaultFetchParams<T>(url: string, onOK: (data: T) => void, data
         },
         onErr: (errMsg, httpResponseStatus?: number) => {
             if (UseCacheConfig.EnableLog) console.log("httpResponseStatus=" + httpResponseStatus + ", defaultFetchParams: onErr from remote server: errMsg=" + errMsg)
-            if (UseCacheConfig.showToast) UseCacheConfig.showToast("httpResponseStatus=" + httpResponseStatus + +": " + errMsg)
+            if (UseCacheConfig.showToast) UseCacheConfig.showToast("httpResponseStatus=" + httpResponseStatus + ": " + errMsg)
         }
     }
     return p
@@ -110,160 +110,42 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
 }
 
 
-// export function cachedFetch2<DATATYPE>(params: FetchParams<DATATYPE>) {
-//     const storageType = params.storageType === undefined ? UseCacheConfig.defaultStorageType : params.storageType
-//     if (params.shortKey) {
-//         const v = CacheStorage.getObject(params.shortKey, storageType)
-//         if (v) {
-//             if (UseCacheConfig.EnableLog) console.log("cachedFetch: got value from cache, shortKey=" + params.shortKey)
-//             if (params.onDone) params.onDone()
-//             params.onOK(v)
-//             return true
-//         } else {
-//             if (UseCacheConfig.EnableLog) console.log("cachedFetch: not found value from cache, shortKey=" + params.shortKey)
-//         }
-//     }
 
-//     let url = params.url
-//     let requestInit: RequestInit
-//     const authHeader = params.attachAuthHeader === false ? undefined : UseCacheConfig.authheaders()
-//     switch (params.method) {
-//         case "GET":
-//         case "DELETE":
-//             {
-//                 url = params.url + query2Params(params.data)
-//                 requestInit = {
-//                     method: params.method,
-//                     headers: new Headers({
-//                         ...authHeader,
-//                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-//                     })
-//                 }
-
-//                 break
-//             }
-//         case "POST":
-//         case "PUT": {
-//             url = params.url
-//             requestInit = {
-//                 method: params.method,
-//                 body: params.data ? JSON.stringify(params.data) : undefined,
-//                 headers: new Headers({
-//                     ...authHeader,
-//                     'Content-Type': 'application/json; charset=UTF-8'
-//                 })
-//             }
-//             break
-//         }
-
-//         default: {
-//             console.warn("please use fetch API directly")
-//             return false
-//         }
-//     }
-
-//     //default is true
-//     const isShowLoading = params.isShowLoading === false ? false : true
-//     if (isShowLoading) {
-//         const showLoading = params.showLoading || UseCacheConfig.showLoading
-//         if (showLoading) showLoading()
-//     }
-
-//     if (UseCacheConfig.EnableLog) console.log("cachedFetch: from remote server...")
-
-//     ////https://developer.mozilla.org/en-US/docs/Web/API/fetch
-//     //https://www.ruanyifeng.com/blog/2020/12/fetch-tutorial.html
-//     fetch(url, requestInit).then(response => {
-//         if (isShowLoading && params.hideLoading) {
-//             const hide = params.hideLoading || UseCacheConfig.hideLoading
-//             if (hide) hide()
-//         }
-//         if (params.onDone) params.onDone()
-//         if (response.ok) {
-//             return response.json()
-//         } else {
-//             const msg = response.statusText
-//             console.warn("cachedFetch response.status:" + response.status+ ", "+ msg)
-//             if (params.onErr) params.onErr(msg, response.status)
-//             return new Promise((resolve: (data: any) => void, reject: (reason: FecthErrResson) => void) => reject({status: response.status, msg: msg}));
-//             //throw new Error(msg);
-//         }
-//     }).then(json => {
-//         if(!json) return;
-//         const box: DataBox<DATATYPE> = params.transformDataBoxFromResponseJson ? params.transformDataBoxFromResponseJson(json) : json
-//         if (box.code === CODE.OK) {
-//             const data = getDataFromBox(box)
-//             if (data === undefined) { //if(0)返回false if(data)判断有问题
-//                 if (params.onNoData) {
-//                     if (UseCacheConfig.EnableLog) console.log("cachedFetch: no data from remote server")
-//                     params.onNoData()
-//                 } else {
-//                     console.log("cachedFetch: no onNoData handler")
-//                 }
-//             } else {
-//                 if (params.shortKey) {
-//                     CacheStorage.saveItem(params.shortKey, JSON.stringify(data), storageType)
-//                 }
-//                 params.onOK(data)
-//             }
-//             //return false
-//         } else {
-//             if (params.onKO) {
-//                 if (UseCacheConfig.EnableLog) console.log("cachedFetch: fail from remote server: code=" + box.code + ",msg=" + box.msg)
-//                 params.onKO(box.code, box.msg)
-//             } else {
-//                 console.log("cachedFetch: no onKO handler")
-//             }
-//             //return false;
-//         }
-//     }).catch(reason => {
-//         if (isShowLoading && params.hideLoading) {
-//             const hide = params.hideLoading || UseCacheConfig.hideLoading
-//             if (hide) hide()
-//         }
-//         if (params.onErr) params.onErr(reason.msg, reason.status)
-//         else {
-//             console.warn("cachedFetch: no onErr handler, but has err: " + reason.msg + ", status:"+reason.status)
-//             //throw new Error(err.message);
-//         }
-
-//         //return false;
-//     })
-
-//     return false
-// }
 
 
 /**
  * 返回一个Promise
- * 如果正常则resolve后的结果为T类型; 如果错误发生，reject一个string错误信息
- * T可以为payload中的biz data，也可为其它任意包裹类型（需提供transfomFromBizData进行转换）
+ * 如果正常则resolve后的结果为R类型; 如果错误发生，reject一个string错误信息
+ * remote返回的类型也可为其它任意包裹类型，transfomFromBizData将其转换为DataBox<T>类型，若远程返回结果格式不为DataBox<T>，则需提供transformDataBoxFromResponseJson进行转换。
+ * T可以经过transfomFromBizData转换后为最终返回的R类型。
+ * 
  * 
  * 若需使用缓存（先从缓存中读取，没有则从远程获取，获取后将结果保存到缓存中），则需提供shortKey，默认的storageType为UseCacheConfig.defaultStorageType，即sessionStorage中
- * 若需将biz data转换成其它类型，则需提供transfomFromBizData转换函数； 不提供时，则T为payload biz data
- * 若远程返回结果格式不为DataBox<T>，则需提供transformDataBoxFromResponseJson进行转换
+ * 
+ * 
  * 若需自动添加auth认证时，则将attachAuthHeader设置为true
  * 若需显示loading，则将isShowLoading设置为true，并提供showLoading/hideLoading函数
+ * 
  * @param url  remote reuqest url 
  * @param method "GET" | "POST" | "PUT" | "DELETE"
  * @param data search query parameters
  * @param shortKey short cache key
  * @param storageType UseCacheConfig.defaultStorageType
  * @param transformDataBoxFromResponseJson tranformer from response json from remote to DataBox<T>
- * @param transfomFromBizData tranformer from payload biz data to T if provided
+ * @param transfomFromBizData tranformer from payload biz data from T to R if provided
  * @param attachAuthHeader add auth header into request headers
  * @param isShowLoading show loading when request if provide showLoading function
  * @param showLoading show loading function
  * @param hideLoading  hide loading function
  */
-export const cachedFetchPromise = async <T>(
+export const cachedFetchPromise = async <T, R>(
     url: string,
     method: "GET" | "POST" | "PUT" | "DELETE",
     data?: object,
     shortKey?: string,
     storageType: number = UseCacheConfig.defaultStorageType,
     transformDataBoxFromResponseJson?: (json: any) => DataBox<T>,
-    transfomFromBizData?: (bizData: any) => T,
+    transfomFromBizData?: (bizData: T) => R,
     attachAuthHeader?: boolean, //= true
     isShowLoading: boolean = false, //default is false
     showLoading?: () => void,
@@ -339,14 +221,15 @@ export const cachedFetchPromise = async <T>(
         if (response.status < 400 && response.ok) {
             return response.json()
         } else {
-            const msg = response.statusText
+            const msg = response.statusText || ("HTTP " + response.status)
             console.warn("cachedFetchPromise response.status:" + response.status + ", " + msg)
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({ status: response.status, msg: msg }));
+            // HTTP 状态错误：携带 status，cachedFetch 据此路由到 onErr
+            return new Promise<T | undefined>((resolve, reject) => reject({ status: response.status, msg }));
             //if (params.onErr) params.onErr(msg, response.status)
         }
     }).then(json => {
         const box: DataBox<any> = transformDataBoxFromResponseJson ? transformDataBoxFromResponseJson(json) : json
-        if (box.code === CODE.OK) {
+        if (box && box.code === CODE.OK) {
             //const data = box.data
             const data = getDataFromBox(box)
             if (data === undefined) { //if(0)返回false if(data)判断有问题
@@ -359,20 +242,21 @@ export const cachedFetchPromise = async <T>(
             const d = transfomFromBizData ? transfomFromBizData(data) : data
             return new Promise<T | undefined>(resolve => resolve(d))
         } else {
-            if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + box.code + ",msg=" + box.msg)
-
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => reject({ msg: box.msg, status: 200, code: box.code }));
+            const code = box ? box.code : undefined
+            const msg = box ? box.msg : "返回数据格式错误"
+            if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + code + ",msg=" + msg)
+            // 业务错误：不携带 status，cachedFetch 据此路由到 onKO（业务逻辑错误回调）
+            return new Promise<T | undefined>((resolve, reject) => reject({ msg, code }));
         }
     })
-    // .catch(reason => {
-    //     if (UseCacheConfig.EnableLog)
-    //         console.log("cachedFetchPromise exception from remote server:" + err)
-    //     else {
-    //         console.warn("cachedFetchPromise: no onErr handler, but has err: " + err)
-    //     }
-    //     throw Error(err)
-    //     // return new Promise<T|undefined>((resolve: ( data: T|undefined)=>void, reject: (reason: string)=>void) => reject( "err.message=" + err.message));
-    // })
 
-    return p
+    // 网络异常 / JSON 解析失败 / 其它非预期异常：统一包装为 FecthErrResson(status=0)，路由到 onErr。
+    // 已是 FecthErrResson（HTTP 状态错误 / 业务逻辑错误）则原样透传，避免破坏其 status/code 路由。
+    return p.catch((reason: any) => {
+        if (reason && (reason.status !== undefined || reason.code !== undefined)) {
+            return Promise.reject(reason)
+        }
+        const msg = reason && reason.message ? reason.message : String(reason)
+        return Promise.reject({ status: 0, msg: "网络请求异常：" + msg } as FecthErrResson)
+    })
 }
