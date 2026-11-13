@@ -77,21 +77,22 @@ export function useCacheList<T, Q extends BasePageQuery>(
 
  //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
-    const fetchFromRemote = (isLoadMore: boolean, pageSize: number, wholeUrl: string) => cachedFetch<T[]>(
+    const fetchFromRemote = (needConcat: boolean, pageSize: number, wholeUrl: string) => cachedFetch<T[]>(
         {
             url: wholeUrl, 
             method: "GET",
             attachAuthHeader: true,
             storageType,
             isShowLoading: true,
-            onDone: () => {      
+            onDone: () => {    
+                setIsLoading(false)
                 setIsLoadMore(false)//恢复普通状态，每次loadMore时再设置
             },
             onOK: (data) => {
-                setIsLoading(false)
+                //setIsLoading(false) //done in onDone
                 setIsError(false)
                 setUseCache(true)
-                const result = (isLoadMore && list && list.length > 0) ? list.concat(data) : data
+                const result = (needConcat && list && list.length > 0) ? list.concat(data) : data
                 setList(result)
 
                 if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
@@ -105,31 +106,32 @@ export function useCacheList<T, Q extends BasePageQuery>(
                
             },
             onKO: (code, msg) => {
-                setIsLoading(false)
+                //setIsLoading(false) //done in onDone
                 setIsError(true)
                 if (needLoadMore) {
-                    setLoadMoreState(false)
+                    setLoadMoreState(false) //biz error, cannot load more
                     if (shortKey) saveLoadMoreState(shortKey, false)
                 }
                 setErrMsg(code + ": " + msg)
                 if (UseCacheConfig.EnableLog) console.log("remote server return err code=" + code + ", msg=" + msg)
             },
             onNoData: () => {
-                setIsLoading(false)
+                //setIsLoading(false) //done in onDone
                 setIsError(true)
                 if (needLoadMore) {
                     setErrMsg("no data")
+                    setLoadMoreState(false)
                     if (shortKey) saveLoadMoreState(shortKey, false)
                 }
                 if (UseCacheConfig.EnableLog) console.log("return from remote server: no data")
             },
             onErr: (errMsg) => {
-                setIsLoading(false)
+                //setIsLoading(false) //done in onDone
                 setUseCache(false) //出错了，可以重试重新加载
 
                 setIsError(true)
                 setErrMsg(errMsg)
-                if (needLoadMore) {
+                if (needLoadMore) {//http or network error, cannot load
                     if (shortKey) saveLoadMoreState(shortKey, false)
                     setLoadMoreState(false)
                 }
@@ -143,8 +145,7 @@ export function useCacheList<T, Q extends BasePageQuery>(
    
 
     useEffect(() => {
-        if (UseCacheConfig.EnableLog)
-            console.log("useCacheList useEffect, try load from local or remote, refreshCount=" + refreshCount + ", wholeUrl=" + wholeUrl)
+        //if (UseCacheConfig.EnableLog)  console.log("useCacheList useEffect, try load from local or remote, refreshCount=" + refreshCount + ", wholeUrl=" + wholeUrl)
         setIsLoading(true)
         if (current.useCache && shortKey) {
             const v = CacheStorage.getObject(shortKey, storageType)
@@ -152,7 +153,12 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if (UseCacheConfig.EnableLog) console.log("fetch from local cache, shortKey:" + shortKey + ", list.length: " + v.length)
                 setList(v)
                 setIsLoading(false)
-                setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
+                if (v.length >= current.pageSize) { 
+                    if (UseCacheConfig.EnableLog) console.log("get list size > pageSize, set loadMore cached state")
+                    setLoadMoreState(getLoadMoreState(shortKey)) //从缓存加载了数据，也对应加载其loadMore状态
+                } else {
+                    setLoadMoreState(false)
+                }
             } else {
                 if (UseCacheConfig.EnableLog) console.log("no local cache, try from remote...")
                 if(wholeUrl)
@@ -161,11 +167,11 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if (UseCacheConfig.EnableLog)  console.log("wholeUrl is not set, setQuery firstly")
             }
         } else {
-            if (UseCacheConfig.EnableLog) console.log("useCache=false, try from remote...")
+            if (UseCacheConfig.EnableLog) console.log("useCache=false or no cacheKey, try from remote...")
             if(wholeUrl)
                 fetchFromRemote(current.isLoadMore, current.pageSize, wholeUrl)
             else
-            if (UseCacheConfig.EnableLog)  console.log("wholeUrl is not set, setQuery firstly")
+                console.log("wholeUrl is not set, setQuery firstly")
         }
 
     }, [wholeUrl, refreshCount])//变化导致重新加载 

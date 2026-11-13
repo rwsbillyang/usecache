@@ -27,7 +27,7 @@ export const CacheStorage = {
                 if (v) sessionStorage.setItem(key, v)
             }
         }
-        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.getItem: key=${key}, defaultValue=${defaultValue}`)
+        if(UseCacheConfig.EnableLog_CacheStorage) console.log(`CacheStorage.getItem: key=${key}, defaultValue=${defaultValue}`)
         return v || defaultValue
     },
 
@@ -67,7 +67,7 @@ export const CacheStorage = {
             localStorage.setItem(key, v)
         }
 
-        if(UseCacheConfig.EnableLog) console.log(`CacheStorage.saveItem: key=${key}`)
+        if(UseCacheConfig.EnableLog_CacheStorage) console.log(`CacheStorage.saveItem: key=${key}`)
     }, 
 
     /**

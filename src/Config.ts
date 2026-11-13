@@ -4,6 +4,7 @@ import { StorageType } from "./StorageType";
 
 interface IUseCacheConfig {
     EnableLog: boolean
+    EnableLog_CacheStorage: boolean
     cacheSpace: () => string
     defaultIdentiyKey: string
     defaultStorageType: number
@@ -31,6 +32,7 @@ interface IUseCacheConfig {
  */
 export const UseCacheConfig: IUseCacheConfig = {
     EnableLog: false,
+    EnableLog_CacheStorage: false,
 
     cacheSpace: () => "",
 
