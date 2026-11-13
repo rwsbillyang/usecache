@@ -180,8 +180,8 @@ export const cachedFetchPromise = async <T, R>(
         if (v) {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: got value from cache, shortKey=" + shortKey)
             //params.onOK(v)
-            const d = transfomFromBizData ? transfomFromBizData(v) : v
-            return new Promise<T | undefined>((resolve: (data: T | undefined) => void, reject: (reason: FecthErrResson) => void) => resolve(d))
+            const d = transfomFromBizData ? transfomFromBizData(v) : (v as R)
+            return new Promise<R | undefined>((resolve: (data: R | undefined) => void, reject: (reason: FecthErrResson) => void) => resolve(d))
         } else {
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: not found value from cache, shortKey=" + shortKey)
         }
@@ -221,7 +221,7 @@ export const cachedFetchPromise = async <T, R>(
 
         default: {
             console.warn("cachedFetchPromise: please use fetch API directly")
-            return new Promise<T | undefined>((resolve, reject: (reason: FecthErrResson) => void) =>
+            return new Promise<R | undefined>((resolve, reject: (reason: FecthErrResson) => void) =>
                 reject({ status: 0, code: FetchErrCode.UNSUPPORTED_METHOD, message: "please use fetch API directly" }));
         }
     }
@@ -248,7 +248,7 @@ export const cachedFetchPromise = async <T, R>(
             const msg = response.statusText || ("HTTP " + response.status)
             console.warn("cachedFetchPromise response.status:" + response.status + ", " + msg)
             // HTTP 状态错误：携带 status，cachedFetch 据此路由到 onErr
-            return new Promise<T | undefined>((resolve, reject) => reject({ status: response.status, code: FetchErrCode.HTTP_STATUS, message: msg }));
+            return new Promise<R | undefined>((resolve, reject) => reject({ status: response.status, code: FetchErrCode.HTTP_STATUS, message: msg }));
             //if (params.onErr) params.onErr(msg, response.status)
         }
     }).then(json => {
@@ -263,14 +263,14 @@ export const cachedFetchPromise = async <T, R>(
                     CacheStorage.saveItem(shortKey, JSON.stringify(data), storageType)
                 }
             }
-            const d = transfomFromBizData ? transfomFromBizData(data) : data
-            return new Promise<T | undefined>(resolve => resolve(d))
+            const d = transfomFromBizData ? transfomFromBizData(data) : (data as R)
+            return new Promise<R | undefined>(resolve => resolve(d))
         } else {
             const code = box ? box.code : undefined
             const msg = box ? box.msg : "返回数据格式错误"
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + code + ",msg=" + msg)
             // 业务错误：status 记为 0（无 HTTP 错误），cachedFetch 据此路由到 onKO（业务逻辑错误回调）
-            return new Promise<T | undefined>((resolve, reject) => reject({ status: 0, code: code, message: msg }));
+            return new Promise<R | undefined>((resolve, reject) => reject({ status: 0, code: code, message: msg }));
         }
     })
 
