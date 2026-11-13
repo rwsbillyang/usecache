@@ -5,10 +5,28 @@ import { CODE, type DataBox, getDataFromBox } from "./DataBox";
 import { query2Params } from "./utils";
 
 export interface FecthErrResson {
-    msg?: string
+    message?: string
     code?: string
     status?: number
+    tId?: string //tId traceId from remote server, for debug, from DataBox
+    host?: string //host of remote server, for debug， from DataBox
 }
+
+/**
+ * 统一错误码：用于标识 cachedFetchPromise 抛出的各类系统级错误。
+ * 业务逻辑错误的 code 为服务端返回的 DataBox.code（应用自定义），不在本表中。
+ */
+export const FetchErrCode = {
+    /** 不支持的 HTTP 方法，cachedFetchPromise 直接 reject */
+    UNSUPPORTED_METHOD: 'UnsupportedMethod',
+    /** HTTP 响应状态码非 2xx */
+    HTTP_STATUS: 'HttpStatus',
+    /** 网络异常 / 请求未发出 / 响应无法解析 */
+    NETWORK: 'NetworkException',
+} as const
+
+/** 系统级错误码集合，用于区分「业务逻辑错误」与「系统/网络错误」。 */
+const SYSTEM_ERR_CODES = new Set<string>([FetchErrCode.UNSUPPORTED_METHOD, FetchErrCode.HTTP_STATUS, FetchErrCode.NETWORK]);
 /**
  * load data from remote server or local cache depends on shortKey
  * 
@@ -99,12 +117,17 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
             } else {
                 params.onOK(d)
             }
-        }).catch(reason => {
+        }).catch((reason: Partial<FecthErrResson>) => {
             if (params.onDone) params.onDone()
-            if (reason.status === undefined) {
-                if (params.onKO) params.onKO(reason.code, reason.msg)
+            if (reason.status !== undefined && reason.status > 0) {
+                // HTTP 状态错误
+                if (params.onErr) params.onErr(reason.message ?? '', reason.status)
+            } else if (reason.code && SYSTEM_ERR_CODES.has(reason.code)) {
+                // 系统级错误：网络异常 / 不支持的请求方法等
+                if (params.onErr) params.onErr(reason.message ?? '', reason.status ?? 0)
             } else {
-                if (params.onErr) params.onErr(reason.msg, reason.status)
+                // 业务逻辑错误（服务端返回非 OK 的 DataBox）
+                if (params.onKO) params.onKO(reason.code ?? '', reason.message)
             }
         })
 }
@@ -115,7 +138,7 @@ export function cachedFetch<DATATYPE>(params: FetchParams<DATATYPE>) {
 
 /**
  * 返回一个Promise
- * 如果正常则resolve后的结果为R类型; 如果错误发生，reject一个string错误信息
+ * 如果正常则resolve后的结果为R类型; 如果错误发生，reject一个FecthErrResson错误信息
  * remote返回的类型也可为其它任意包裹类型，transfomFromBizData将其转换为DataBox<T>类型，若远程返回结果格式不为DataBox<T>，则需提供transformDataBoxFromResponseJson进行转换。
  * T可以经过transfomFromBizData转换后为最终返回的R类型。
  * 
@@ -198,7 +221,8 @@ export const cachedFetchPromise = async <T, R>(
 
         default: {
             console.warn("cachedFetchPromise: please use fetch API directly")
-            return new Promise((resolve: (data: T | undefined) => void, reject: (reason: string) => void) => reject("please use fetch API directly"));
+            return new Promise<T | undefined>((resolve, reject: (reason: FecthErrResson) => void) =>
+                reject({ status: 0, code: FetchErrCode.UNSUPPORTED_METHOD, message: "please use fetch API directly" }));
         }
     }
 
@@ -224,7 +248,7 @@ export const cachedFetchPromise = async <T, R>(
             const msg = response.statusText || ("HTTP " + response.status)
             console.warn("cachedFetchPromise response.status:" + response.status + ", " + msg)
             // HTTP 状态错误：携带 status，cachedFetch 据此路由到 onErr
-            return new Promise<T | undefined>((resolve, reject) => reject({ status: response.status, msg }));
+            return new Promise<T | undefined>((resolve, reject) => reject({ status: response.status, code: FetchErrCode.HTTP_STATUS, message: msg }));
             //if (params.onErr) params.onErr(msg, response.status)
         }
     }).then(json => {
@@ -245,8 +269,8 @@ export const cachedFetchPromise = async <T, R>(
             const code = box ? box.code : undefined
             const msg = box ? box.msg : "返回数据格式错误"
             if (UseCacheConfig.EnableLog) console.log("cachedFetchPromise: fail from remote server: code=" + code + ",msg=" + msg)
-            // 业务错误：不携带 status，cachedFetch 据此路由到 onKO（业务逻辑错误回调）
-            return new Promise<T | undefined>((resolve, reject) => reject({ msg, code }));
+            // 业务错误：status 记为 0（无 HTTP 错误），cachedFetch 据此路由到 onKO（业务逻辑错误回调）
+            return new Promise<T | undefined>((resolve, reject) => reject({ status: 0, code: code, message: msg }));
         }
     })
 
@@ -257,6 +281,32 @@ export const cachedFetchPromise = async <T, R>(
             return Promise.reject(reason)
         }
         const msg = reason && reason.message ? reason.message : String(reason)
-        return Promise.reject({ status: 0, msg: "网络请求异常：" + msg } as FecthErrResson)
+        return Promise.reject({ status: 0, message: "网络请求异常：" + msg, code: FetchErrCode.NETWORK } as FecthErrResson)
     })
+}
+
+/**
+ * 将 cachedFetchPromise / cachedFetch 抛出的 FecthErrResson（或任意异常）转换为可读的错误提示字符串。
+ * - HTTP 状态错误：reason.status > 0
+ * - 业务逻辑错误 / 网络异常等：优先使用 message，其次使用 code
+ * 
+ * @param e 捕获到的异常（FecthErrResson / Error / unknown）
+ * @param fallback 操作描述，如“查询模型列表失败”
+ */
+export function toErrMsg(e: unknown, fallback?: string): string {
+    const prefix = fallback ? fallback + '：' : ''
+    const r = e as Partial<FecthErrResson> | null
+    if (r && typeof r === 'object') {
+        if (r.status !== undefined && r.status > 0) {
+            return `${prefix}HTTP ${r.status}${r.message ? '，' + r.message : ''}`
+        }
+        if (r.message) {
+            return `${prefix}${r.message}`
+        }
+        if (r.code) {
+            return `${prefix}${r.code}`
+        }
+    }
+    if (e instanceof Error) return `${prefix}${e.message}`
+    return `${prefix}${String(e)}`
 }
