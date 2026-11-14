@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cachedFetch } from "./cachedFetch";
 
 import { CacheStorage } from "./CacheStorage";
@@ -60,24 +60,24 @@ export function useCacheList<T, Q extends BasePageQuery>(
         isLoadMore: false, //是否加载更多的标志
     })
     //设置加载参数，设置为false，将只从远程加载
-    const setUseCache = (useLocalCache: boolean) => { current.useCache = useLocalCache }
+    const setUseCache = useCallback((useLocalCache: boolean) => { current.useCache = useLocalCache }, [])
 
     //设置为true，加载后的数据将与原列表数据合并，加载完成后自动设置为false，等待下载加载更多时需重新设置为true
-    const setIsLoadMore = (toLoadMore: boolean) => { current.isLoadMore = toLoadMore }
+    const setIsLoadMore = useCallback((toLoadMore: boolean) => { current.isLoadMore = toLoadMore }, [])
 
 
     //调用它重新加载，往往需要加载本地数据
-    const setRefresh = () => { setRefreshCount(refreshCount + 1) }
+    const setRefresh = useCallback(() => { setRefreshCount((c) => c + 1) }, [])
     //调用它，若参数变化，将重新加载数据，往往是远程数据
-    const setQuery = (query?: Q) => {
+    const setQuery = useCallback((query?: Q) => {
         if (UseCacheConfig.EnableLog)
             console.log("setQuery: " + JSON.stringify(query))
         setWholeUrl(url + query2Params(query))
-    }
+    }, [url])
 
  //从远程加载数据，会动态更新加载状态、是否有错误、错误信息
     //加载完毕后，更新list，自动缓存数据（与现有list合并）、设置加载按钮状态
-    const fetchFromRemote = (needConcat: boolean, pageSize: number, wholeUrl: string) => cachedFetch<T[]>(
+    const fetchFromRemote = useCallback((needConcat: boolean, pageSize: number, wholeUrl: string) => cachedFetch<T[]>(
         {
             url: wholeUrl, 
             method: "GET",
@@ -92,10 +92,12 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 //setIsLoading(false) //done in onDone
                 setIsError(false)
                 setUseCache(true)
-                const result = (needConcat && list && list.length > 0) ? list.concat(data) : data
-                setList(result)
-
-                if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
+                //使用函数式更新，避免依赖闭包中的 list，消除 stale 风险
+                setList((prev) => {
+                    const result = (needConcat && prev && prev.length > 0) ? prev.concat(data) : data
+                    if (shortKey) CacheStorage.saveObject(shortKey, result, storageType)
+                    return result
+                })
 
                 if (needLoadMore) {//每次渲染时捕获传来的最新值
                     const newState = data.length >= pageSize
@@ -141,7 +143,7 @@ export function useCacheList<T, Q extends BasePageQuery>(
                 if (UseCacheConfig.EnableLog) console.log("useCacheList exception from remote server: ", errMsg)
             },
             transformDataBoxFromResponseJson: transformDataBoxFromResponseJson
-        })
+        }), [storageType, needLoadMore, shortKey, transformDataBoxFromResponseJson])
    
 
     useEffect(() => {
